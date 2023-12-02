@@ -1,5 +1,5 @@
 from draw_utils import *
-from constants import INFO_BG_DARK
+from constants import INFO_BG_DARK, TEXTBOX_PADDING
 
 
 class TextBox:
@@ -33,7 +33,9 @@ class TextBox:
         lines = text.split("\n")
         cursor_pos[0] = get_text_size(lines[-1])[0]
         cursor_pos[1] = (len(lines) - 1) * line_height()
-        area_rect = pg.Rect(self.area_rect_offset, (self.rect.w - 20, self.rect.h - 20))
+        area_rect = pg.Rect(
+            self.area_rect_offset,
+            (self.rect.w - TEXTBOX_PADDING * 2, self.rect.h - TEXTBOX_PADDING * 2))
         if cursor_pos[0] < area_rect.left:
             area_rect.left = cursor_pos[0]
             self.area_rect_offset[0] = cursor_pos[0]
@@ -47,12 +49,12 @@ class TextBox:
             area_rect.bottom = cursor_pos[1] + line_height() - 1
             self.area_rect_offset[1] = area_rect.bottom - area_rect.h
 
-        cursor_pos[0] += self.rect.x + 10 - self.area_rect_offset[0]
-        cursor_pos[1] += self.rect.y + 10 - self.area_rect_offset[1]
+        cursor_pos[0] += self.rect.x + TEXTBOX_PADDING - self.area_rect_offset[0]
+        cursor_pos[1] += self.rect.y + TEXTBOX_PADDING - self.area_rect_offset[1]
 
         rendered_text = write_text_highlighted(self.text)
         pg.draw.rect(screen, INFO_BG_DARK, self.rect)
-        screen.blit(rendered_text, (self.rect.x + 10, self.rect.y + 10), area_rect)
+        screen.blit(rendered_text, (self.rect.x + TEXTBOX_PADDING, self.rect.y + TEXTBOX_PADDING), area_rect)
         pg.draw.rect(screen, (255, 0, 0), pg.Rect(cursor_pos, (2, line_height())))
 
     def handle_event(self, event: pg.event.Event):
