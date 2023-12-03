@@ -1,8 +1,8 @@
-from blocks import *
-from constants import SELECTION_BORDER_COLOR, GUIDELINE_COLOR, AXIS_COLOR
-from draw_utils import line_height, draw_arrow
+from ui_components.blocks import *
+from .constants import GUIDELINE_COLOR, AXIS_COLOR, EDITOR_BG_COLOR
+from text_rendering import line_height
+from ui_components import InfoBar, draw_arrows
 import pygame as pg
-from info_bar import InfoBar
 
 
 class Editor:
@@ -171,15 +171,6 @@ class Editor:
             elif event.key == pg.K_KP6:
                 block.in_point = "right"
 
-    def __draw_arrows(self, screen):
-        for b in self.blocks:
-            for i, nb in enumerate(b.next_block):
-                if nb is None:
-                    continue
-                in_p_name = nb.in_point
-                out_p_name = b.out_point[i]
-                draw_arrow(screen, b.rect, out_p_name, nb.rect, in_p_name, self.global_offset)
-
     def __update_info_bar(self):
         if len(self.selected_blocks) != 1:
             self.info_bar = None
@@ -201,9 +192,11 @@ class Editor:
                 screen.set_at((x, y), GUIDELINE_COLOR)
 
     def draw(self, screen: pg.Surface):
+        screen.fill(EDITOR_BG_COLOR)
+
         self.__update_info_bar()
         self.__draw_background_grid(screen)
-        self.__draw_arrows(screen)
+        draw_arrows(screen, self.blocks, self.global_offset)
 
         for block in self.blocks:
             block.draw(

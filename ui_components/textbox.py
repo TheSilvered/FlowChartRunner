@@ -1,9 +1,12 @@
 import time
-from draw_utils import *
-from constants import (
-    TEXTBOX_BG_COLOR, TEXTBOX_PADDING, TEXTBOX_CARET_COLOR, TEXTBOX_CARET_BLINK_SPEED, HC_STRS, TEXTBOX_BORDER_COLOR,
+import pygame as pg
+from draw_utils import draw_rect
+from text_rendering import get_text_size, line_height, write_text, write_text_highlighted
+from .constants import (
+    TEXTBOX_BG_COLOR, TEXTBOX_PADDING, TEXTBOX_CARET_COLOR, TEXTBOX_CARET_BLINK_SPEED, TEXTBOX_BORDER_COLOR,
     TEXTBOX_SELECTEC_BORDER_COLOR
 )
+from text_rendering.constants import HC_STRS
 
 movement_keys = pg.K_UP, pg.K_DOWN, pg.K_LEFT, pg.K_RIGHT, pg.K_HOME, pg.K_END
 control_keys = pg.K_LCTRL, pg.K_RCTRL, pg.K_LSHIFT, pg.K_RSHIFT, pg.K_LALT, pg.K_RALT
@@ -148,9 +151,9 @@ class TextBox:
             )
 
         if self.focused:
-            aa_rect(screen, self.rect, TEXTBOX_BG_COLOR, TEXTBOX_PADDING, 2, TEXTBOX_SELECTEC_BORDER_COLOR)
+            draw_rect(screen, self.rect, TEXTBOX_BG_COLOR, TEXTBOX_PADDING, 2, TEXTBOX_SELECTEC_BORDER_COLOR)
         else:
-            aa_rect(screen, self.rect, TEXTBOX_BG_COLOR, TEXTBOX_PADDING, 2, TEXTBOX_BORDER_COLOR)
+            draw_rect(screen, self.rect, TEXTBOX_BG_COLOR, TEXTBOX_PADDING, 2, TEXTBOX_BORDER_COLOR)
 
         screen.blit(rendered_text, (self.rect.x + TEXTBOX_PADDING, self.rect.y + TEXTBOX_PADDING), area_rect)
 

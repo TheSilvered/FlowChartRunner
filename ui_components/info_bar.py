@@ -1,9 +1,9 @@
-from blocks import *
-from constants import (
+from .blocks import *
+from .constants import (
     PROPERTY_VALUE_COL_WIDTH, INFO_BAR_WIDTH, PROPERTY_H_PADDING, PROPERTY_V_PADDING, PROPERTY_TEXTBOX_PADDING,
     INFO_BG_DARK, INFO_BG_LIGHT, PROPERTY_BORDER_COLOR
 )
-from textbox import TextBox
+from ui_components.textbox import TextBox
 
 
 class InfoBar:

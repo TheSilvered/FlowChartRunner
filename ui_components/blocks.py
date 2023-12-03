@@ -1,7 +1,9 @@
 from __future__ import annotations
+import pygame as pg
 from abc import ABC, abstractmethod
 from draw_utils import *
-from constants import (
+from text_rendering import *
+from .constants import (
     BLOCK_BG_COLOR,
     BLOCK_BORDER_COLOR,
     SELECTION_BORDER_COLOR,
@@ -11,6 +13,7 @@ from constants import (
 from typing import Iterable
 from enum import Enum, auto
 from dataclasses import dataclass
+from asset_manager import get_image
 
 
 @dataclass
@@ -157,7 +160,7 @@ class StartBlock(BlockBase):
         text_size = list(text.get_size())
         text_size[0] += 20
         text_size[1] += 20
-        aa_rect(
+        draw_rect(
             screen,
             pg.Rect(list(self.pos + global_offset), text_size),
             BLOCK_BG_COLOR,
@@ -185,7 +188,7 @@ class EndBlock(BlockBase):
         text_size = list(text.get_size())
         text_size[0] += 20
         text_size[1] += 20
-        aa_rect(
+        draw_rect(
             screen,
             pg.Rect(list(self.pos + global_offset), text_size),
             BLOCK_BG_COLOR,
@@ -322,12 +325,11 @@ class CalcBlock(BlockBase):
         text_surf = write_text_highlighted(self.content, "center")
 
         text_w, text_h = text_surf.get_size()
-        block = aa_rect(
-            None,
-            pg.Rect(0, 0, text_w + 20, text_h + 20),
+        draw_rect(
+            screen,
+            pg.Rect(list(self.pos + global_offset), (text_w + 20, text_h + 20)),
             BLOCK_BG_COLOR,
             0, 2, _block_state_colors[state])
-        screen.blit(block, list(self.pos + global_offset))
         screen.blit(text_surf, list(self.pos + (10, 10)))
 
     def get_size(self):

@@ -1,4 +1,4 @@
-from constants import HC_STRS
+from .constants import HC_STRS
 
 KEYWORDS = ("read", "as", "and", "or", "not")
 TYPE_NAMES = ("Number", "String", "Boolean")
