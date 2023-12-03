@@ -21,7 +21,7 @@ class TextBox:
     @focused.setter
     def focused(self, focus):
         if focus:
-            pg.key.set_repeat(300, 25)
+            pg.key.set_repeat(400, 40)
             self._focused = True
         else:
             pg.key.set_repeat()
@@ -35,6 +35,8 @@ class TextBox:
         start = self.text.rfind("\n", 0, self.caret_pos)
         if whole:
             end = self.text.find("\n", self.caret_pos)
+            if end == -1:
+                end = len(self.text)
         else:
             end = self.caret_pos
         return self.text[start + 1:end]
@@ -121,6 +123,19 @@ class TextBox:
             curr_line_part = self.__get_current_caret_line(False)
             self.caret_pos += len(curr_line_full) - len(curr_line_part) + 1  # + 1 for \n
             self.caret_pos += min(len(line_below), len(curr_line_part))
+        elif event.key == pg.K_END:
+            if pg.key.get_mods() & pg.KMOD_CTRL:
+                self.caret_pos = len(self.text)
+                return
+            curr_line_part = self.__get_current_caret_line(False)
+            curr_line_full = self.__get_current_caret_line(True)
+            self.caret_pos += len(curr_line_full) - len(curr_line_part)
+        elif event.key == pg.K_HOME:
+            if pg.key.get_mods() & pg.KMOD_CTRL:
+                self.caret_pos = 0
+                return
+            curr_line = self.__get_current_caret_line(False)
+            self.caret_pos -= len(curr_line)
         elif event.key == pg.K_BACKSPACE:
             self.text = self.text[:max(0, self.caret_pos - 1)] + self.text[self.caret_pos:]
             self.caret_pos = max(0, self.caret_pos - 1)
