@@ -1,4 +1,4 @@
-from blocks import BlockBase, StartBlock, BlockState
+from blocks import *
 from constants import (
     SELECTION_BORDER_COLOR, INFO_BG_DARK, INFO_BG_LIGHT, GUIDELINE_COLOR, AXIS_COLOR, BLOCK_BORDER_COLOR,
     PROPERTY_NAME_COL_WIDTH, PROPERTY_VALUE_COL_WIDTH, PROPERTY_H_PADDING, PROPERTY_V_PADDING
@@ -9,9 +9,15 @@ from textbox import TextBox
 
 
 class Editor:
-    def __init__(self, start_block: StartBlock):
-        self.blocks = []
-        self.__add_blocks(start_block)
+    def __init__(self):
+        start_block = StartBlock()
+        end_block = EndBlock(start_block)
+
+        start_block.pos = [0, 0]
+        end_block_x = (start_block.get_size()[0] - end_block.get_size()[0]) / 2 + start_block.pos[0]
+        end_block.pos = [end_block_x, start_block.get_size()[1] + line_height() * 3]
+
+        self.blocks: list[BlockBase] = [start_block, end_block]
         self.dragging_blocks: list[BlockBase] | None = None
         self.has_moved = False
         self.dragging_global = False
@@ -22,12 +28,6 @@ class Editor:
         self.global_offset = [0, 0]
         self.content_textbox: TextBox | None = None
         self.content_box_id = -1
-
-        y = 20
-        for i, block in enumerate(self.blocks):
-            block_size = block.get_size()
-            block.pos = (10 * i + 30, y)
-            y += block_size[1] + 40
 
     def __add_blocks(self, start_block):
         block_set = set()
@@ -75,59 +75,90 @@ class Editor:
             abs(self.select_start[1] - mp[1])
         )
 
+    def __handle_mouse_button_down_event(self, event):
+        if event.button == pg.BUTTON_RIGHT:
+            self.dragging_global = True
+            return
+        elif event.button != pg.BUTTON_LEFT:
+            return
+
+        if self.content_textbox is not None and self.content_textbox.rect.collidepoint(event.pos):
+            print(self.content_textbox.rect, event.pos)
+            self.content_textbox.focused = True
+            print(self.content_textbox.focused)
+            return
+        elif self.content_textbox is not None:
+            self.content_textbox.focused = False
+
+        block = self.intersect_point(event.pos)
+        if block is not None:
+            if block not in self.selected_blocks:
+                self.selected_blocks = [block]
+            self.dragging_blocks = self.selected_blocks
+            return
+        self.selected_blocks = []
+        self.selecting = True
+        self.select_start = event.pos
+        self.select_area = pg.Rect(event.pos, (0, 0))
+
+    def __handle_mouse_button_up_event(self, event):
+        if event.button == pg.BUTTON_RIGHT:
+            self.dragging_global = False
+            return
+        elif event.button != pg.BUTTON_LEFT:
+            return
+
+        if self.selecting:
+            self.selected_blocks = self.intersect_all_rect(self.select_area)
+        elif not self.has_moved:
+            block = self.intersect_point(event.pos)
+            if block is not None:
+                self.selected_blocks = [block]
+        self.selecting = False
+        self.dragging_blocks = None
+        self.has_moved = False
+
+    def __handle_mouse_motion_event(self, event):
+        if self.dragging_blocks is not None:
+            self.has_moved = True
+            for block in self.dragging_blocks:
+                block.add_pos(event.rel)
+        elif self.dragging_global:
+            for block in self.blocks:
+                block.add_pos(event.rel)
+            self.global_offset[0] += event.rel[0]
+            self.global_offset[1] += event.rel[1]
+        elif self.selecting:
+            self.update_select_area()
+
     def handle_event(self, event: pg.event.Event):
         if self.content_textbox is not None and self.content_textbox.focused:
             if self.content_textbox.handle_event(event):
                 return
 
         if event.type == pg.MOUSEBUTTONDOWN:
-            if event.button == pg.BUTTON_LEFT:
-                if self.content_textbox is not None and self.content_textbox.rect.collidepoint(event.pos):
-                    print(self.content_textbox.rect, event.pos)
-                    self.content_textbox.focused = True
-                    print(self.content_textbox.focused)
-                    return
-                elif self.content_textbox is not None:
-                    self.content_textbox.focused = False
-
-                block = self.intersect_point(event.pos)
-                if block is not None:
-                    if block not in self.selected_blocks:
-                        self.selected_blocks = [block]
-                    self.dragging_blocks = self.selected_blocks
-                    return
-                self.selected_blocks = []
-                self.selecting = True
-                self.select_start = event.pos
-                self.select_area = pg.Rect(event.pos, (0, 0))
-            elif event.button == pg.BUTTON_RIGHT:
-                self.dragging_global = True
+            self.__handle_mouse_button_down_event(event)
         elif event.type == pg.MOUSEBUTTONUP:
-            if event.button == pg.BUTTON_LEFT:
-                if self.selecting:
-                    self.selected_blocks = self.intersect_all_rect(self.select_area)
-                elif not self.has_moved:
-                    block = self.intersect_point(event.pos)
-                    if block is not None:
-                        self.selected_blocks = [block]
-                self.selecting = False
-                self.dragging_blocks = None
-                self.has_moved = False
-            elif event.button == pg.BUTTON_RIGHT:
-                self.dragging_global = False
+            self.__handle_mouse_button_up_event(event)
         elif event.type == pg.MOUSEMOTION:
-            if self.dragging_blocks is not None:
-                self.has_moved = True
-                for block in self.dragging_blocks:
-                    block.add_pos(event.rel)
-            elif self.dragging_global:
-                for block in self.blocks:
-                    block.add_pos(event.rel)
-                self.global_offset[0] += event.rel[0]
-                self.global_offset[1] += event.rel[1]
-            elif self.selecting:
-                self.update_select_area()
+            self.__handle_mouse_motion_event(event)
         elif event.type == pg.KEYDOWN:
+            if event.key == pg.K_i:
+                input_block = IOBlock(None, "", True)
+                self.blocks.append(input_block)
+            elif event.key == pg.K_o:
+                output_block = IOBlock(None, "", False)
+                self.blocks.append(output_block)
+            elif event.key == pg.K_c:
+                cond_block = CondBlock(None, "")
+                self.blocks.append(cond_block)
+            elif event.key == pg.K_n:
+                calc_block = CalcBlock(None, "")
+                self.blocks.append(calc_block)
+            elif event.key == pg.K_v:
+                var_block = InitBlock(None, "")
+                self.blocks.append(var_block)
+
             if len(self.selected_blocks) != 1:
                 return
 
@@ -152,6 +183,8 @@ class Editor:
     def draw_arrows(self, screen):
         for b in self.blocks:
             for i, nb in enumerate(b.next_block):
+                if nb is None:
+                    continue
                 in_p_name = nb.in_point
                 out_p_name = b.out_point[i]
                 draw_arrow(screen, b.rect, out_p_name, nb.rect, in_p_name)
@@ -208,37 +241,43 @@ class Editor:
             self.content_textbox.rect.bottom = screen.get_height()
             self.content_textbox.draw(screen)
 
+    def __update_content_textbox(self):
+        if len(self.selected_blocks) == 1 and self.content_textbox is None:
+            if not self.selected_blocks[0].editable:
+                return
+            self.content_textbox = TextBox(pg.Rect(
+                0, 0,
+                PROPERTY_NAME_COL_WIDTH + PROPERTY_VALUE_COL_WIDTH, 300
+            ))
+            self.content_textbox.set_text(self.selected_blocks[0].content)
+            self.content_box_id = id(self.selected_blocks[0])
+        elif len(self.selected_blocks) == 1 and self.content_textbox is not None:
+            if self.content_box_id == id(self.selected_blocks[0]):
+                self.selected_blocks[0].content = self.content_textbox.text
+                return
+
+            if not self.selected_blocks[0].editable:
+                self.content_textbox = None
+                self.content_box_id = -1
+                return
+
+            self.content_textbox = TextBox(pg.Rect(
+                0, 0,
+                PROPERTY_NAME_COL_WIDTH + PROPERTY_VALUE_COL_WIDTH, 300
+            ))
+            self.content_textbox.set_text(self.selected_blocks[0].content)
+            self.content_box_id = id(self.selected_blocks[0])
+        else:
+            self.content_textbox = None
+            self.content_box_id = -1
+
     def draw(self, screen: pg.Surface):
         screen_w = screen.get_width()
         screen_h = screen.get_height()
         offset_x = self.global_offset[0] % 50
         offset_y = self.global_offset[1] % 50
 
-        if len(self.selected_blocks) == 1 and self.content_textbox is None:
-            if self.selected_blocks[0].editable:
-                self.content_textbox = TextBox(pg.Rect(
-                    0, 0,
-                    PROPERTY_NAME_COL_WIDTH + PROPERTY_VALUE_COL_WIDTH, 300
-                ))
-                self.content_textbox.set_text(self.selected_blocks[0].content)
-                self.content_box_id = id(self.selected_blocks[0])
-        elif len(self.selected_blocks) == 1 and self.content_textbox is not None:
-            if self.content_box_id == id(self.selected_blocks[0]):
-                self.selected_blocks[0].content = self.content_textbox.text
-            else:
-                if self.selected_blocks[0].editable:
-                    self.content_textbox = TextBox(pg.Rect(
-                        0, 0,
-                        PROPERTY_NAME_COL_WIDTH + PROPERTY_VALUE_COL_WIDTH, 300
-                    ))
-                    self.content_textbox.set_text(self.selected_blocks[0].content)
-                    self.content_box_id = id(self.selected_blocks[0])
-                else:
-                    self.content_textbox = None
-                    self.content_box_id = -1
-        else:
-            self.content_textbox = None
-            self.content_box_id = -1
+        self.__update_content_textbox()
 
         if 0 <= self.global_offset[1] <= screen_w:
             pg.draw.line(screen, AXIS_COLOR, (0, self.global_offset[1]), (screen_w, self.global_offset[1]))

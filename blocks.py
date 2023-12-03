@@ -210,7 +210,15 @@ class CondBlock(BlockBase):
 
     @property
     def next_block(self):
-        return self.on_true.next_block[0], self.on_false.next_block[0]
+        if self.on_true.next_block == ():
+            on_true_next_block = None
+        else:
+            on_true_next_block = self.on_true.next_block[0]
+        if self.on_false.next_block == ():
+            on_false_next_block = None
+        else:
+            on_false_next_block = self.on_false.next_block[0]
+        return on_true_next_block, on_false_next_block
 
     @next_block.setter
     def next_block(self, value):

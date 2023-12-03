@@ -10,11 +10,7 @@ def main():
     pg.display.set_caption("FlowChart Runner")
     load_font()
 
-    start_block = StartBlock()
-    io_block = IOBlock(start_block, "", True)
-    EndBlock(io_block)
-
-    editor = Editor(start_block)
+    editor = Editor()
 
     while True:
         for event in pg.event.get():
