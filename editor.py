@@ -20,9 +20,8 @@ class Editor:
         self.select_area = pg.Rect(-1, -1, 0, 0)
         self.selected_blocks: list[BlockBase] = []
         self.global_offset = [0, 0]
-        self.test_textbox = TextBox(pg.Rect(100, 100, 300, 500), None, None, False)
-
-        self.test_textbox.set_text("dup = 2 * sin(a) * cos(a)")
+        self.content_textbox: TextBox | None = None
+        self.content_box_id = -1
 
         y = 20
         for i, block in enumerate(self.blocks):
@@ -77,12 +76,20 @@ class Editor:
         )
 
     def handle_event(self, event: pg.event.Event):
-        if self.test_textbox.focused:
-            self.test_textbox.handle_event(event)
-            return
+        if self.content_textbox is not None and self.content_textbox.focused:
+            if self.content_textbox.handle_event(event):
+                return
 
         if event.type == pg.MOUSEBUTTONDOWN:
             if event.button == pg.BUTTON_LEFT:
+                if self.content_textbox is not None and self.content_textbox.rect.collidepoint(event.pos):
+                    print(self.content_textbox.rect, event.pos)
+                    self.content_textbox.focused = True
+                    print(self.content_textbox.focused)
+                    return
+                elif self.content_textbox is not None:
+                    self.content_textbox.focused = False
+
                 block = self.intersect_point(event.pos)
                 if block is not None:
                     if block not in self.selected_blocks:
@@ -121,9 +128,6 @@ class Editor:
             elif self.selecting:
                 self.update_select_area()
         elif event.type == pg.KEYDOWN:
-            if event.key == pg.K_t:
-                self.test_textbox.focused = True
-                return
             if len(self.selected_blocks) != 1:
                 return
 
@@ -199,12 +203,42 @@ class Editor:
                 PROPERTY_NAME_COL_WIDTH + PROPERTY_VALUE_COL_WIDTH + 4, len(properties) * lh + 4),
             width=2
         )
+        if self.content_textbox is not None:
+            self.content_textbox.rect.right = screen.get_width()
+            self.content_textbox.rect.bottom = screen.get_height()
+            self.content_textbox.draw(screen)
 
     def draw(self, screen: pg.Surface):
         screen_w = screen.get_width()
         screen_h = screen.get_height()
         offset_x = self.global_offset[0] % 50
         offset_y = self.global_offset[1] % 50
+
+        if len(self.selected_blocks) == 1 and self.content_textbox is None:
+            if self.selected_blocks[0].editable:
+                self.content_textbox = TextBox(pg.Rect(
+                    0, 0,
+                    PROPERTY_NAME_COL_WIDTH + PROPERTY_VALUE_COL_WIDTH, 300
+                ))
+                self.content_textbox.set_text(self.selected_blocks[0].content)
+                self.content_box_id = id(self.selected_blocks[0])
+        elif len(self.selected_blocks) == 1 and self.content_textbox is not None:
+            if self.content_box_id == id(self.selected_blocks[0]):
+                self.selected_blocks[0].content = self.content_textbox.text
+            else:
+                if self.selected_blocks[0].editable:
+                    self.content_textbox = TextBox(pg.Rect(
+                        0, 0,
+                        PROPERTY_NAME_COL_WIDTH + PROPERTY_VALUE_COL_WIDTH, 300
+                    ))
+                    self.content_textbox.set_text(self.selected_blocks[0].content)
+                    self.content_box_id = id(self.selected_blocks[0])
+                else:
+                    self.content_textbox = None
+                    self.content_box_id = -1
+        else:
+            self.content_textbox = None
+            self.content_box_id = -1
 
         if 0 <= self.global_offset[1] <= screen_w:
             pg.draw.line(screen, AXIS_COLOR, (0, self.global_offset[1]), (screen_w, self.global_offset[1]))
@@ -224,5 +258,3 @@ class Editor:
 
         if self.selecting:
             pg.draw.rect(screen, SELECTION_BORDER_COLOR, self.select_area, 1)
-
-        self.test_textbox.draw(screen)

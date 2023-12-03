@@ -328,9 +328,10 @@ def write_text_highlighted(
         text: str,
         align: str = "left",
         width: int = -1,
-        selection_range: tuple[int, int] | None = None):
+        selection_range: tuple[int, int] | None = None,
+        add_newline_width: bool = False):
     text = highlight_text(text)
-    return write_text(text, align, width, selection_range)
+    return write_text(text, align, width, selection_range, add_newline_width)
 
 
 def _parse_highlight(text: str):
@@ -391,7 +392,8 @@ def write_text(
         text: str,
         align: str = "left",
         width: int = -1,
-        selection_range: tuple[int, int] | None = None):
+        selection_range: tuple[int, int] | None = None,
+        add_newline_width: bool = False):
     lines = _parse_highlight(text)
     raw_lines = list("".join(map(lambda y: y[1], cr)) for cr in lines)
     lh = _font.get_linesize()
@@ -405,7 +407,10 @@ def write_text(
     surface = _text_cache.get((text, align, width, selection_range), None)
     if surface is not None:
         return surface
-    surface = pg.Surface((surf_width + SELECTION_NEWLINE_WIDTH, surf_height), pg.SRCALPHA)
+    if add_newline_width:
+        surface = pg.Surface((surf_width + SELECTION_NEWLINE_WIDTH, surf_height), pg.SRCALPHA)
+    else:
+        surface = pg.Surface((surf_width, surf_height), pg.SRCALPHA)
 
     if selection_range is not None:
         draw_selection(surface, "\n".join(raw_lines), selection_range)

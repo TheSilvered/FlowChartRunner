@@ -34,6 +34,7 @@ class BlockBase(ABC):
         self._pos: list[int, int] = [0, 0]
         self.in_point = "top"
         self.out_point = ["bottom"]
+        self._editable = True
 
         if prev_block is None:
             return
@@ -43,6 +44,10 @@ class BlockBase(ABC):
         else:
             for block in prev_block:
                 block.next_block = self
+
+    @property
+    def editable(self):
+        return self._editable
 
     def __str__(self):
         return f"{self.__class__.__name__}(next: {', '.join(b.__class__.__name__ for b in self.next_block)})"
@@ -103,6 +108,7 @@ class StartBlock(BlockBase):
     def __init__(self, content: str = "START"):
         super().__init__(content)
         self._surf_cache = None
+        self._editable = False
 
     def execute(self) -> BlockBase:
         return self.next_block[0]
@@ -130,6 +136,7 @@ class EndBlock(BlockBase):
     def __init__(self, prev_block: _prev_block_t, content: str = "END"):
         super().__init__(content, prev_block)
         self._surf_cache = None
+        self._editable = False
 
     def execute(self):
         return None

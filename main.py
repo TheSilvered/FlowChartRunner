@@ -11,8 +11,8 @@ def main():
     load_font()
 
     start_block = StartBlock()
-
-    EndBlock(start_block)
+    io_block = IOBlock(start_block, "", True)
+    EndBlock(io_block)
 
     editor = Editor(start_block)
 

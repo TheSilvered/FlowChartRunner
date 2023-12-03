@@ -7,12 +7,9 @@ control_keys = pg.K_LCTRL, pg.K_RCTRL, pg.K_LSHIFT, pg.K_RSHIFT, pg.K_LALT, pg.K
 
 
 class TextBox:
-    def __init__(self, rect: pg.Rect, on_update, on_update_args, real_time_update: bool):
+    def __init__(self, rect: pg.Rect):
         self.text = ""
         self._caret_pos = 0
-        self.on_update = on_update
-        self.on_update_args = on_update_args
-        self.real_time_update: bool = real_time_update
         self.rect: pg.Rect = rect
         self._focused: bool = False
         self.area_rect_offset = [0, 0]
@@ -129,10 +126,10 @@ class TextBox:
         caret_pos[1] += self.rect.y + TEXTBOX_PADDING - self.area_rect_offset[1]
 
         if self.selection_start is None or self.caret_pos == self.selection_start:
-            rendered_text = write_text_highlighted(self.text)
+            rendered_text = write_text_highlighted(self.text, add_newline_width=True)
         else:
             selection_range = self.__get_selection_range()
-            rendered_text = write_text_highlighted(self.text, selection_range=selection_range)
+            rendered_text = write_text_highlighted(self.text, selection_range=selection_range, add_newline_width=True)
 
         pg.draw.rect(screen, TEXTBOX_BG_COLOR, self.rect)
         screen.blit(rendered_text, (self.rect.x + TEXTBOX_PADDING, self.rect.y + TEXTBOX_PADDING), area_rect)
@@ -190,25 +187,25 @@ class TextBox:
         self.caret_pos = orig_caret_pos
         return final_pos
 
-    def handle_event(self, event: pg.event.Event):
+    def handle_event(self, event: pg.event.Event) -> bool:
         if event.type == pg.MOUSEBUTTONDOWN and event.button == pg.BUTTON_LEFT:
             if not self.rect.collidepoint(event.pos):
-                return
+                return False
             self.caret_pos = self.__get_caret_pos_from_coordinates(event.pos)
             self.selection_start = self.caret_pos
             self.selecting_with_mouse = True
-            return
+            return True
         elif event.type == pg.MOUSEBUTTONUP and event.button == pg.BUTTON_LEFT:
             if self.caret_pos == self.selection_start and self.selecting_with_mouse:
                 self.selection_start = None
             self.selecting_with_mouse = False
-            return
+            return True
         elif event.type == pg.MOUSEMOTION and self.selecting_with_mouse:
             if self.selecting_with_mouse:
                 self.caret_pos = self.__get_caret_pos_from_coordinates(event.pos)
-            return
+            return True
         elif event.type != pg.KEYDOWN:
-            return
+            return False
 
         if self.selection_start is None:
             if pg.key.get_mods() & pg.KMOD_SHIFT and event.key in movement_keys:
@@ -225,14 +222,14 @@ class TextBox:
         elif event.key == pg.K_UP:
             line_above = self.__get_caret_line_above()
             if line_above is None:
-                return
+                return True
             curr_line = self.__get_current_caret_line(False)
             self.caret_pos -= len(curr_line) + len(line_above) + 1  # + 1 for \n
             self.caret_pos += min(len(curr_line), len(line_above))
         elif event.key == pg.K_DOWN:
             line_below = self.__get_caret_line_below()
             if line_below is None:
-                return
+                return True
             curr_line_full = self.__get_current_caret_line(True)
             curr_line_part = self.__get_current_caret_line(False)
             self.caret_pos += len(curr_line_full) - len(curr_line_part) + 1  # + 1 for \n
@@ -240,14 +237,14 @@ class TextBox:
         elif event.key == pg.K_END:
             if pg.key.get_mods() & pg.KMOD_CTRL:
                 self.caret_pos = len(self.text)
-                return
+                return True
             curr_line_part = self.__get_current_caret_line(False)
             curr_line_full = self.__get_current_caret_line(True)
             self.caret_pos += len(curr_line_full) - len(curr_line_part)
         elif event.key == pg.K_HOME:
             if pg.key.get_mods() & pg.KMOD_CTRL:
                 self.caret_pos = 0
-                return
+                return True
             curr_line = self.__get_current_caret_line(False)
             self.caret_pos -= len(curr_line)
         elif event.key == pg.K_BACKSPACE:
@@ -276,3 +273,5 @@ class TextBox:
                 self.focused = False
         elif event.key not in control_keys:
             self.insert_text(event.unicode)
+
+        return True
