@@ -1,9 +1,9 @@
 from blocks import BlockBase, StartBlock, BlockState
 from constants import (
-    SELECTION_BORDER_COLOR, ARROW_COLOR, INFO_BG_DARK, INFO_BG_LIGHT, GUIDELINE_COLOR, AXIS_COLOR, BLOCK_BORDER_COLOR,
+    SELECTION_BORDER_COLOR, INFO_BG_DARK, INFO_BG_LIGHT, GUIDELINE_COLOR, AXIS_COLOR, BLOCK_BORDER_COLOR,
     PROPERTY_NAME_COL_WIDTH, PROPERTY_VALUE_COL_WIDTH, PROPERTY_H_PADDING, PROPERTY_V_PADDING
 )
-from draw_utils import write_text, line_height, get_image
+from draw_utils import write_text, line_height, draw_arrow
 import pygame as pg
 from textbox import TextBox
 
@@ -22,7 +22,7 @@ class Editor:
         self.global_offset = [0, 0]
         self.test_textbox = TextBox(pg.Rect(100, 100, 300, 500), None, None, False, False)
 
-        self.test_textbox.text = "dup = 2 * sin(a) * cos(a)"
+        self.test_textbox.set_text("dup = 2 * sin(a) * cos(a)")
 
         y = 20
         for i, block in enumerate(self.blocks):
@@ -145,187 +145,12 @@ class Editor:
             elif event.key == pg.K_KP6:
                 block.in_point = "right"
 
-    @staticmethod
-    def draw_arrow(screen, p1_rect: pg.Rect, p1_dir, p2_rect: pg.Rect, p2_dir):
-        p1 = list(getattr(p1_rect, "mid" + p1_dir))
-        p2 = list(getattr(p2_rect, "mid" + p2_dir))
-        margin = 15
-
-        orig_p1 = p1.copy()
-        if p1_dir == "left":
-            p1[0] -= margin
-        elif p1_dir == "right":
-            p1[0] += margin
-        elif p1_dir == "top":
-            p1[1] -= margin
-        elif p1_dir == "bottom":
-            p1[1] += margin
-
-        orig_p2 = p2.copy()
-        if p2_dir == "left":
-            p2[0] -= margin
-        elif p2_dir == "right":
-            p2[0] += margin
-        elif p2_dir == "top":
-            p2[1] -= margin
-        elif p2_dir == "bottom":
-            p2[1] += margin
-
-        pg.draw.line(screen, ARROW_COLOR, p1, orig_p1, 2)
-        points = [p1]
-        inverted = False
-
-        if (p1_dir == "right" and p2_dir == "left") or (p1_dir == "top" and p2_dir == "left") or \
-           (p1_dir == "bottom" and p2_dir == "left") or (p1_dir == "top" and p2_dir == "right") or \
-           (p1_dir == "bottom" and p2_dir == "right") or (p1_dir == "bottom" and p2_dir == "top"):
-            p1, p2 = p2, p1
-            p1_rect, p2_rect = p2_rect, p1_rect
-            p1_dir, p2_dir = p2_dir, p1_dir
-            inverted = True
-
-        if p1_dir == p2_dir == "left":
-            if p1[0] < p2[0]:
-                p_x = (p2[0] - p1_rect.right) // 2 + p1_rect.right
-                p_y = min(p2[1], p1_rect.top - margin) if p1[1] > p2[1] else max(p2[1], p1_rect.bottom + margin)
-                points += [(p1[0], p_y), (p_x, p_y), (p_x, p2[1])]
-            else:
-                p_x = (p1[0] - p2_rect.right) // 2 + p2_rect.right
-                p_y = min(p1[1], p2_rect.top - margin) if p1[1] < p2[1] else max(p1[1], p2_rect.bottom + margin)
-                points += [(p_x, p1[1]), (p_x, p_y), (p2[0], p_y)]
-
-        elif p1_dir == p2_dir == "right":
-            if p1[0] > p2[0]:
-                p_x = (p1[0] - p2_rect.left) // 2 + p2_rect.left
-                p_y = min(p2[1], p1_rect.top - margin) if p1[1] > p2[1] else max(p2[1], p1_rect.bottom + margin)
-                points += [(p1[0], p_y), (p_x, p_y), (p_x, p2[1])]
-            else:
-                p_x = (p2[0] - p1_rect.left) // 2 + p1_rect.left
-                p_y = min(p1[1], p2_rect.top - margin) if p1[1] < p2[1] else max(p1[1], p2_rect.bottom + margin)
-                points += [(p_x, p1[1]), (p_x, p_y), (p2[0], p_y)]
-
-        elif p1_dir == p2_dir == "top":
-            if p1[1] < p2[1]:
-                p_x = min(p2[0], p1_rect.left - margin) if p1[0] > p2[0] else max(p2[0], p1_rect.right + margin)
-                p_y = (p2[1] - p1_rect.bottom) // 2 + p1_rect.bottom
-                points += [(p_x, p1[1]), (p_x, p_y), (p2[0], p_y)]
-            else:
-                p_x = min(p1[0], p2_rect.left - margin) if p1[0] < p2[0] else max(p1[0], p2_rect.right + margin)
-                p_y = (p1[1] - p2_rect.bottom) // 2 + p2_rect.bottom
-                points += [(p1[0], p_y), (p_x, p_y), (p_x, p2[1])]
-
-        elif p1_dir == p2_dir == "bottom":
-            if p1[1] < p2[1]:
-                p_x = min(p1[0], p2_rect.left - margin) if p1[0] < p2[0] else max(p1[0], p2_rect.right + margin)
-                p_y = (p2_rect.top - p1[1]) // 2 + p1[1]
-                points += [(p1[0], p_y), (p_x, p_y), (p_x, p2[1])]
-            else:
-                p_x = min(p2[0], p1_rect.left - margin) if p1[0] > p2[0] else max(p2[0], p1_rect.right + margin)
-                p_y = (p2[1] - p1_rect.top) // 2 + p1_rect.top
-                points += [(p_x, p1[1]), (p_x, p_y), (p2[0], p_y)]
-
-        elif p1_dir == "left" and p2_dir == "right":
-            if p1[0] > p2[0]:
-                points += [(p1[0] + (p2[0] - p1[0]) // 2, p1[1]), (p1[0] + (p2[0] - p1[0]) // 2, p2[1])]
-            elif p1_rect.top - p2_rect.bottom >= 4 or p2_rect.top - p1_rect.bottom >= 4:
-                points += [(p1[0], p1[1] + (p2[1] - p1[1]) // 2), (p2[0], p1[1] + (p2[1] - p1[1]) // 2)]
-            else:
-                p_x = max(p1_rect.right, p2_rect.right) + margin
-                p_y = max(p1_rect.bottom, p2_rect.bottom) + margin
-                points += [(p1[0], p_y), (p_x, p_y), (p_x, p2[1])]
-
-        elif p1_dir == "left" and p2_dir == "top":
-            if p1[0] > p2[0] and p1[1] < p2[1]:
-                points += [(p2[0], p1[1])]
-            elif p1_rect.left - p2_rect.right > margin:
-                p_x = (p1[0] - p2_rect.right) // 2 + p2_rect.right
-                points += [(p_x, p1[1]), (p_x, p2[1])]
-            elif p2_rect.top - p1_rect.bottom > margin:
-                p_y = (p2[1] - p1_rect.bottom) // 2 + p1_rect.bottom
-                points += [(p1[0], p_y), (p2[0], p_y)]
-            else:
-                p_x = min(p1_rect.left, p2_rect.left) - margin
-                p_y = min(p1_rect.top, p2_rect.top) - margin
-                points += [(p_x, p1[1]), (p_x, p_y), (p2[0], p_y)]
-
-        elif p1_dir == "left" and p2_dir == "bottom":
-            if p1[0] > p2[0] and p1[1] > p2[1]:
-                points += [(p2[0], p1[1])]
-            elif p1_rect.left - p2_rect.right > margin:
-                p_x = (p1[0] - p2_rect.right) // 2 + p2_rect.right
-                points += [(p_x, p1[1]), (p_x, p2[1])]
-            elif p1_rect.top - p2_rect.bottom > margin:
-                p_y = (p1_rect.top - p2[1]) // 2 + p2[1]
-                points += [(p1[0], p_y), (p2[0], p_y)]
-            else:
-                p_x = min(p1_rect.left, p2_rect.left) - margin
-                p_y = max(p1_rect.bottom, p2_rect.bottom) + margin
-                points += [(p_x, p1[1]), (p_x, p_y), (p2[0], p_y)]
-
-        elif p1_dir == "right" and p2_dir == "top":
-            if p1[0] < p2[0] and p1[1] < p2[1]:
-                points += [(p2[0], p1[1])]
-            elif p2_rect.left - p1_rect.right > margin:
-                p_x = (p2_rect.left - p1[0]) // 2 + p1[0]
-                points += [(p_x, p1[1]), (p_x, p2[1])]
-            elif p2_rect.top - p1_rect.bottom > margin:
-                p_y = (p2[1] - p1_rect.bottom) // 2 + p1_rect.bottom
-                points += [(p1[0], p_y), (p2[0], p_y)]
-            else:
-                p_x = max(p1_rect.right, p2_rect.right) + margin
-                p_y = min(p1_rect.top, p2_rect.top) - margin
-                points += [(p_x, p1[1]), (p_x, p_y), (p2[0], p_y)]
-
-        elif p1_dir == "right" and p2_dir == "bottom":
-            if p1[0] < p2[0] and p1[1] > p2[1]:
-                points += [(p2[0], p1[1])]
-            elif p2_rect.left - p1_rect.right > margin:
-                p_x = (p2_rect.left - p1[0]) // 2 + p1[0]
-                points += [(p_x, p1[1]), (p_x, p2[1])]
-            elif p1_rect.top - p2_rect.bottom > margin:
-                p_y = (p1_rect.top - p2[1]) // 2 + p2[1]
-                points += [(p1[0], p_y), (p2[0], p_y)]
-            else:
-                p_x = max(p1_rect.right, p2_rect.right) + margin
-                p_y = max(p1_rect.bottom, p2_rect.bottom) + margin
-                points += [(p_x, p1[1]), (p_x, p_y), (p2[0], p_y)]
-
-        elif p1_dir == "top" and p2_dir == "bottom":
-            if p1[1] > p2[1]:
-                points += [(p1[0], p1[1] + (p2[1] - p1[1]) // 2), (p2[0], p1[1] + (p2[1] - p1[1]) // 2)]
-            elif p1_rect.left - p2_rect.right >= 4 or p2_rect.left - p1_rect.right >= 4:
-                points += [(p1[0] + (p2[0] - p1[0]) // 2, p1[1]), (p1[0] + (p2[0] - p1[0]) // 2, p2[1])]
-            else:
-                p_x = max(p1_rect.right, p2_rect.right) + margin
-                p_y = min(p1_rect.top, p2_rect.top) - margin
-                points += [(p1[0], p_y), (p_x, p_y), (p_x, p2[1])]
-
-        if inverted:
-            points += [p1]
-            points[0], points[-1] = points[-1], points[0]
-            p1_dir, p2_dir = p2_dir, p1_dir
-        else:
-            points += [p2]
-        pg.draw.lines(screen, ARROW_COLOR, False, points, 2)
-
-        arrow_image = get_image("arrow.png")
-        if p2_dir == "left":
-            arrow_image = pg.transform.rotate(arrow_image, 90)
-            screen.blit(arrow_image, (orig_p2[0] - margin, orig_p2[1] - margin // 2))
-        elif p2_dir == "right":
-            arrow_image = pg.transform.rotate(arrow_image, -90)
-            screen.blit(arrow_image, (orig_p2[0], orig_p2[1] - margin // 2 + 1))
-        elif p2_dir == "top":
-            screen.blit(arrow_image, (orig_p2[0] - margin // 2 + 1, orig_p2[1] - margin))
-        elif p2_dir == "bottom":
-            arrow_image = pg.transform.rotate(arrow_image, 180)
-            screen.blit(arrow_image, (orig_p2[0] - margin // 2, orig_p2[1]))
-
     def draw_arrows(self, screen):
         for b in self.blocks:
             for i, nb in enumerate(b.next_block):
                 in_p_name = nb.in_point
                 out_p_name = b.out_point[i]
-                self.draw_arrow(screen, b.rect, out_p_name, nb.rect, in_p_name)
+                draw_arrow(screen, b.rect, out_p_name, nb.rect, in_p_name)
 
     def draw_block_info(self, block, screen):
         screen_w = screen.get_width()
