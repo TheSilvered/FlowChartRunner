@@ -20,7 +20,7 @@ class Editor:
         self.select_area = pg.Rect(-1, -1, 0, 0)
         self.selected_blocks: list[BlockBase] = []
         self.global_offset = [0, 0]
-        self.test_textbox = TextBox(pg.Rect(100, 100, 300, 500), None, None, False, False)
+        self.test_textbox = TextBox(pg.Rect(100, 100, 300, 500), None, None, False)
 
         self.test_textbox.set_text("dup = 2 * sin(a) * cos(a)")
 

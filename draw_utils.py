@@ -1,6 +1,6 @@
 import pygame as pg
 from math import hypot, ceil, floor, sqrt
-from constants import HC_COLORS, FONT_SIZE, ARROW_COLOR
+from constants import HC_COLORS, FONT_SIZE, ARROW_COLOR, SELECTION_COLOR, SELECTION_NEWLINE_WIDTH
 from highlighter import highlight_text
 
 
@@ -324,9 +324,13 @@ def line_height() -> int:
     return _font.get_linesize()
 
 
-def write_text_highlighted(text: str, align: str = "left", width: int = -1):
+def write_text_highlighted(
+        text: str,
+        align: str = "left",
+        width: int = -1,
+        selection_range: tuple[int, int] | None = None):
     text = highlight_text(text)
-    return write_text(text, align, width)
+    return write_text(text, align, width, selection_range)
 
 
 def _parse_highlight(text: str):
@@ -352,7 +356,42 @@ def _parse_highlight(text: str):
     return final_lines
 
 
-def write_text(text: str, align: str = "left", width: int = -1):
+def draw_selection(surface: pg.Surface, text: str, selection_range: tuple[int, int]):
+    text_before_selection = text[:selection_range[0]]
+    text_inside_selection = text[selection_range[0]:selection_range[1]]
+    lines_before = text_before_selection.count("\n")
+    lines_inside = text_inside_selection.count("\n")
+    line_before = text_before_selection[text_before_selection.rfind("\n") + 1:]
+
+    rect_x = get_text_size(line_before)[0]
+    rect_y = lines_before * line_height()
+
+    if lines_inside == 0:
+        rect_w = get_text_size(text_inside_selection)[0]
+        pg.draw.rect(surface, SELECTION_COLOR, pg.Rect(rect_x, rect_y, rect_w, line_height()))
+        return
+
+    prev_line_end = text_inside_selection.find("\n")
+    rect_w = get_text_size(text_inside_selection[:prev_line_end])[0] + SELECTION_NEWLINE_WIDTH
+    pg.draw.rect(surface, SELECTION_COLOR, pg.Rect(rect_x, rect_y, rect_w, line_height()))
+
+    for i in range(lines_before + 1, lines_before + lines_inside):
+        rect_y = i * line_height()
+        next_line_end = text_inside_selection.find("\n", prev_line_end + 1)
+        rect_w = get_text_size(text_inside_selection[prev_line_end:next_line_end])[0] + SELECTION_NEWLINE_WIDTH
+        prev_line_end = next_line_end
+        pg.draw.rect(surface, SELECTION_COLOR, pg.Rect(0, rect_y, rect_w, line_height()))
+
+    rect_w = get_text_size(text_inside_selection[prev_line_end:])[0]
+    rect_y = (lines_before + lines_inside) * line_height()
+    pg.draw.rect(surface, SELECTION_COLOR, pg.Rect(0, rect_y, rect_w, line_height()))
+
+
+def write_text(
+        text: str,
+        align: str = "left",
+        width: int = -1,
+        selection_range: tuple[int, int] | None = None):
     lines = _parse_highlight(text)
     raw_lines = list("".join(map(lambda y: y[1], cr)) for cr in lines)
     lh = _font.get_linesize()
@@ -363,10 +402,13 @@ def write_text(text: str, align: str = "left", width: int = -1):
     else:
         width = -1
 
-    surface = _text_cache.get((text, align, width), None)
+    surface = _text_cache.get((text, align, width, selection_range), None)
     if surface is not None:
         return surface
-    surface = pg.Surface((surf_width, surf_height), pg.SRCALPHA)
+    surface = pg.Surface((surf_width + SELECTION_NEWLINE_WIDTH, surf_height), pg.SRCALPHA)
+
+    if selection_range is not None:
+        draw_selection(surface, "\n".join(raw_lines), selection_range)
 
     if align not in ("left", "right", "center"):
         raise ValueError(f"alignment {align!r} is not valid")
@@ -384,8 +426,7 @@ def write_text(text: str, align: str = "left", width: int = -1):
             surface.blit(text_surf, (x, lh * i))
             x += text_surf.get_width()
 
-    _text_cache[(text, align, width)] = surface
-    _text_size_cache[text] = surface.get_size()
+    _text_cache[(text, align, width, selection_range)] = surface
     return surface
 
 
@@ -400,6 +441,8 @@ def get_text_size(text: str):
     height = len(raw_lines) * lh
     width = max((_font.size(line)[0] for line in raw_lines))
 
+    if text == "":
+        print("Hello")
     _text_size_cache[text] = (width, height)
     return width, height
 
