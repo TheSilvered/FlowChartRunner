@@ -1,13 +1,16 @@
 import time
 from draw_utils import *
-from constants import TEXTBOX_BG_COLOR, TEXTBOX_PADDING, TEXTBOX_CARET_COLOR, TEXTBOX_CARET_BLINK_SPEED
+from constants import (
+    TEXTBOX_BG_COLOR, TEXTBOX_PADDING, TEXTBOX_CARET_COLOR, TEXTBOX_CARET_BLINK_SPEED, HC_STRS, TEXTBOX_BORDER_COLOR,
+    TEXTBOX_SELECTEC_BORDER_COLOR
+)
 
 movement_keys = pg.K_UP, pg.K_DOWN, pg.K_LEFT, pg.K_RIGHT, pg.K_HOME, pg.K_END
 control_keys = pg.K_LCTRL, pg.K_RCTRL, pg.K_LSHIFT, pg.K_RSHIFT, pg.K_LALT, pg.K_RALT
 
 
 class TextBox:
-    def __init__(self, rect: pg.Rect):
+    def __init__(self, rect: pg.Rect, placeholder_text: str = ""):
         self.text = ""
         self._caret_pos = 0
         self.rect: pg.Rect = rect
@@ -16,6 +19,7 @@ class TextBox:
         self.blink_start = 0
         self.selection_start = None
         self.selecting_with_mouse = False
+        self.placeholder_text = placeholder_text
 
     @property
     def focused(self):
@@ -126,12 +130,28 @@ class TextBox:
         caret_pos[1] += self.rect.y + TEXTBOX_PADDING - self.area_rect_offset[1]
 
         if self.selection_start is None or self.caret_pos == self.selection_start:
-            rendered_text = write_text_highlighted(self.text, add_newline_width=True)
+            selection_range = None
         else:
             selection_range = self.__get_selection_range()
-            rendered_text = write_text_highlighted(self.text, selection_range=selection_range, add_newline_width=True)
 
-        pg.draw.rect(screen, TEXTBOX_BG_COLOR, self.rect)
+        if self.text:
+            rendered_text = write_text_highlighted(
+                self.text,
+                selection_range=selection_range,
+                add_newline_width=True
+            )
+        else:
+            rendered_text = write_text(
+                HC_STRS["light_gray"] + self.placeholder_text,
+                selection_range=selection_range,
+                add_newline_width=True
+            )
+
+        if self.focused:
+            aa_rect(screen, self.rect, TEXTBOX_BG_COLOR, TEXTBOX_PADDING, 2, TEXTBOX_SELECTEC_BORDER_COLOR)
+        else:
+            aa_rect(screen, self.rect, TEXTBOX_BG_COLOR, TEXTBOX_PADDING, 2, TEXTBOX_BORDER_COLOR)
+
         screen.blit(rendered_text, (self.rect.x + TEXTBOX_PADDING, self.rect.y + TEXTBOX_PADDING), area_rect)
 
         curr_time = time.perf_counter()

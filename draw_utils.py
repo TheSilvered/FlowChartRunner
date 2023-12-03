@@ -446,8 +446,6 @@ def get_text_size(text: str):
     height = len(raw_lines) * lh
     width = max((_font.size(line)[0] for line in raw_lines))
 
-    if text == "":
-        print("Hello")
     _text_size_cache[text] = (width, height)
     return width, height
 
@@ -461,6 +459,7 @@ def get_image(path, is_transparent=False):
         image.convert_alpha()
     else:
         image.convert()
+    _images[path] = image
     return image
 
 
@@ -641,7 +640,7 @@ def draw_arrow(screen, p1_rect: pg.Rect, p1_dir, p2_rect: pg.Rect, p2_dir, globa
         arrow_image = pg.transform.rotate(arrow_image, -90)
         screen.blit(arrow_image, (orig_p2[0] + global_offset[0], orig_p2[1] - margin // 2 + 1 + global_offset[1]))
     elif p2_dir == "top":
-        screen.blit(arrow_image, (orig_p2[0] - margin // 2 + 1 + global_offset[0], orig_p2[1] - margin + global_offset[1]))
+        screen.blit(arrow_image, (orig_p2[0] - margin//2 + 1+global_offset[0], orig_p2[1] - margin + global_offset[1]))
     elif p2_dir == "bottom":
         arrow_image = pg.transform.rotate(arrow_image, 180)
         screen.blit(arrow_image, (orig_p2[0] - margin // 2 + global_offset[0], orig_p2[1] + global_offset[1]))
