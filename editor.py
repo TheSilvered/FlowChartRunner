@@ -1,11 +1,8 @@
 from blocks import *
-from constants import (
-    SELECTION_BORDER_COLOR, INFO_BG_DARK, INFO_BG_LIGHT, GUIDELINE_COLOR, AXIS_COLOR, BLOCK_BORDER_COLOR,
-    PROPERTY_NAME_COL_WIDTH, PROPERTY_VALUE_COL_WIDTH, PROPERTY_H_PADDING, PROPERTY_V_PADDING
-)
-from draw_utils import write_text, line_height, draw_arrow
+from constants import SELECTION_BORDER_COLOR, GUIDELINE_COLOR, AXIS_COLOR
+from draw_utils import line_height, draw_arrow
 import pygame as pg
-from textbox import TextBox
+from info_bar import InfoBar
 
 
 class Editor:
@@ -26,8 +23,7 @@ class Editor:
         self.select_area = pg.Rect(-1, -1, 0, 0)
         self.selected_blocks: list[BlockBase] = []
         self.global_offset = [0, 0]
-        self.content_textbox: TextBox | None = None
-        self.content_box_id = -1
+        self.info_bar: InfoBar | None = None
 
     def __add_blocks(self, start_block):
         block_set = set()
@@ -41,6 +37,7 @@ class Editor:
                 queue.append(next_block)
 
     def intersect_point(self, point) -> BlockBase | None:
+        point = list(Pos(*point) - self.global_offset)
         for b in reversed(self.blocks):
             if b.rect.collidepoint(point):
                 return b
@@ -48,12 +45,15 @@ class Editor:
 
     def intersect_all_point(self, point) -> list[BlockBase]:
         blocks = []
+        point = list(Pos(*point) - self.global_offset)
         for b in reversed(self.blocks):
             if b.rect.collidepoint(point):
                 blocks.append(b)
         return blocks
 
     def intersect_rect(self, rect: pg.Rect) -> BlockBase | None:
+        rect.x -= self.global_offset[0]
+        rect.y -= self.global_offset[1]
         for b in reversed(self.blocks):
             if b.inside(rect):
                 return b
@@ -61,6 +61,8 @@ class Editor:
 
     def intersect_all_rect(self, rect: pg.Rect) -> list[BlockBase]:
         blocks = []
+        rect.x -= self.global_offset[0]
+        rect.y -= self.global_offset[1]
         for b in self.blocks:
             if b.inside(rect):
                 blocks.append(b)
@@ -81,14 +83,6 @@ class Editor:
             return
         elif event.button != pg.BUTTON_LEFT:
             return
-
-        if self.content_textbox is not None and self.content_textbox.rect.collidepoint(event.pos):
-            print(self.content_textbox.rect, event.pos)
-            self.content_textbox.focused = True
-            print(self.content_textbox.focused)
-            return
-        elif self.content_textbox is not None:
-            self.content_textbox.focused = False
 
         block = self.intersect_point(event.pos)
         if block is not None:
@@ -124,17 +118,14 @@ class Editor:
             for block in self.dragging_blocks:
                 block.add_pos(event.rel)
         elif self.dragging_global:
-            for block in self.blocks:
-                block.add_pos(event.rel)
             self.global_offset[0] += event.rel[0]
             self.global_offset[1] += event.rel[1]
         elif self.selecting:
             self.update_select_area()
 
     def handle_event(self, event: pg.event.Event):
-        if self.content_textbox is not None and self.content_textbox.focused:
-            if self.content_textbox.handle_event(event):
-                return
+        if self.info_bar is not None and self.info_bar.handle_event(event):
+            return
 
         if event.type == pg.MOUSEBUTTONDOWN:
             self.__handle_mouse_button_down_event(event)
@@ -180,105 +171,26 @@ class Editor:
             elif event.key == pg.K_KP6:
                 block.in_point = "right"
 
-    def draw_arrows(self, screen):
+    def __draw_arrows(self, screen):
         for b in self.blocks:
             for i, nb in enumerate(b.next_block):
                 if nb is None:
                     continue
                 in_p_name = nb.in_point
                 out_p_name = b.out_point[i]
-                draw_arrow(screen, b.rect, out_p_name, nb.rect, in_p_name)
+                draw_arrow(screen, b.rect, out_p_name, nb.rect, in_p_name, self.global_offset)
 
-    def draw_block_info(self, block, screen):
-        screen_w = screen.get_width()
-        screen_h = screen.get_height()
-        property_name_col = pg.Rect(
-            screen_w - PROPERTY_NAME_COL_WIDTH - PROPERTY_VALUE_COL_WIDTH, 0,
-            PROPERTY_NAME_COL_WIDTH, screen_h)
-        property_value_col = pg.Rect(
-            screen_w - PROPERTY_VALUE_COL_WIDTH, 0,
-            PROPERTY_VALUE_COL_WIDTH, screen_h)
-        lh = line_height() + PROPERTY_V_PADDING * 2
+    def __update_info_bar(self):
+        if len(self.selected_blocks) != 1:
+            self.info_bar = None
+        elif self.info_bar != self.selected_blocks[0]:
+            self.info_bar = InfoBar(self.selected_blocks[0])
 
-        properties = [
-            ("Type", block.__class__.__name__),
-            ("Position", f"x: {block.pos[0] - self.global_offset[0]}, y: {block.pos[1] - self.global_offset[1]}"),
-            ("Size", f"w: {block.get_size()[0]}, h: {block.get_size()[1]}"),
-        ]
-
-        for i, (p_name, p_val) in enumerate(properties):
-            line_rect = pg.Rect(property_name_col.x, lh * i, property_name_col.w + property_value_col.w, lh)
-            if i % 2 == 0:
-                pg.draw.rect(screen, INFO_BG_DARK, line_rect)
-            else:
-                pg.draw.rect(screen, INFO_BG_LIGHT, line_rect)
-
-            p_name_surf = write_text(p_name)
-            p_val_surf = write_text(p_val)
-            p_name_rect = pg.Rect(0, 0, property_name_col.w, lh)
-            p_val_rect = pg.Rect(0, 0, property_value_col.w, lh)
-            screen.blit(
-                p_name_surf,
-                (property_name_col.x + PROPERTY_H_PADDING, lh * i + PROPERTY_V_PADDING),
-                p_name_rect
-            )
-            screen.blit(
-                p_val_surf,
-                (property_value_col.x + PROPERTY_H_PADDING, lh * i + PROPERTY_V_PADDING),
-                p_val_rect
-            )
-
-        pg.draw.rect(
-            surface=screen,
-            color=BLOCK_BORDER_COLOR,
-            rect=pg.Rect(
-                property_name_col.x - 2, -2,
-                PROPERTY_NAME_COL_WIDTH + PROPERTY_VALUE_COL_WIDTH + 4, len(properties) * lh + 4),
-            width=2
-        )
-        if self.content_textbox is not None:
-            self.content_textbox.rect.right = screen.get_width()
-            self.content_textbox.rect.bottom = screen.get_height()
-            self.content_textbox.draw(screen)
-
-    def __update_content_textbox(self):
-        if len(self.selected_blocks) == 1 and self.content_textbox is None:
-            if not self.selected_blocks[0].editable:
-                return
-            self.content_textbox = TextBox(pg.Rect(
-                0, 0,
-                PROPERTY_NAME_COL_WIDTH + PROPERTY_VALUE_COL_WIDTH, 300
-            ))
-            self.content_textbox.set_text(self.selected_blocks[0].content)
-            self.content_box_id = id(self.selected_blocks[0])
-        elif len(self.selected_blocks) == 1 and self.content_textbox is not None:
-            if self.content_box_id == id(self.selected_blocks[0]):
-                self.selected_blocks[0].content = self.content_textbox.text
-                return
-
-            if not self.selected_blocks[0].editable:
-                self.content_textbox = None
-                self.content_box_id = -1
-                return
-
-            self.content_textbox = TextBox(pg.Rect(
-                0, 0,
-                PROPERTY_NAME_COL_WIDTH + PROPERTY_VALUE_COL_WIDTH, 300
-            ))
-            self.content_textbox.set_text(self.selected_blocks[0].content)
-            self.content_box_id = id(self.selected_blocks[0])
-        else:
-            self.content_textbox = None
-            self.content_box_id = -1
-
-    def draw(self, screen: pg.Surface):
+    def __draw_background_grid(self, screen):
         screen_w = screen.get_width()
         screen_h = screen.get_height()
         offset_x = self.global_offset[0] % 50
         offset_y = self.global_offset[1] % 50
-
-        self.__update_content_textbox()
-
         if 0 <= self.global_offset[1] <= screen_w:
             pg.draw.line(screen, AXIS_COLOR, (0, self.global_offset[1]), (screen_w, self.global_offset[1]))
         if 0 <= self.global_offset[0] <= screen_w:
@@ -288,12 +200,20 @@ class Editor:
             for y in range(offset_y, screen_h + offset_y, 50):
                 screen.set_at((x, y), GUIDELINE_COLOR)
 
-        self.draw_arrows(screen)
-        for block in self.blocks:
-            block.draw(screen, BlockState.SELECTED if block in self.selected_blocks else BlockState.IDLE)
+    def draw(self, screen: pg.Surface):
+        self.__update_info_bar()
+        self.__draw_background_grid(screen)
+        self.__draw_arrows(screen)
 
-        if len(self.selected_blocks) == 1:
-            self.draw_block_info(self.selected_blocks[0], screen)
+        for block in self.blocks:
+            block.draw(
+                screen,
+                BlockState.SELECTED if block in self.selected_blocks else BlockState.IDLE,
+                self.global_offset
+            )
+
+        if self.info_bar is not None:
+            self.info_bar.draw(screen)
 
         if self.selecting:
             pg.draw.rect(screen, SELECTION_BORDER_COLOR, self.select_area, 1)

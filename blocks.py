@@ -10,6 +10,42 @@ from constants import (
 )
 from typing import Iterable
 from enum import Enum, auto
+from dataclasses import dataclass
+
+
+@dataclass
+class Pos:
+    x: int
+    y: int
+
+    def __add__(self, other):
+        try:
+            return Pos(self.x + other[0], self.y + other[1])
+        except Exception:
+            raise NotImplemented
+
+    def __iadd__(self, other):
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        try:
+            return Pos(self.x - other[0], self.y - other[1])
+        except Exception:
+            raise NotImplemented
+
+    def __isub__(self, other):
+        return self.__sub__(other)
+
+    def __getitem__(self, item):
+        if item == 0:
+            return self.x
+        elif item == 1:
+            return self.y
+        else:
+            raise IndexError(f"index {item} out of Pos")
+
+    def __iter__(self):
+        return iter((self.x, self.y))
 
 
 class BlockState(Enum):
@@ -31,7 +67,7 @@ class BlockBase(ABC):
     def __init__(self, content: str, prev_block: _prev_block_t = None):
         self.content: str = content
         self._next_block: BlockBase | None = None
-        self._pos: list[int, int] = [0, 0]
+        self._pos: Pos = Pos(0, 0)
         self.in_point = "top"
         self.out_point = ["bottom"]
         self._editable = True
@@ -60,7 +96,7 @@ class BlockBase(ABC):
         pass
 
     @abstractmethod
-    def draw(self, screen, state):
+    def draw(self, screen, state, global_offset):
         pass
 
     @abstractmethod
@@ -69,7 +105,7 @@ class BlockBase(ABC):
 
     @property
     def rect(self):
-        return pg.Rect(self.pos, self.get_size())
+        return pg.Rect(*self.pos, *self.get_size())
 
     @property
     def next_block(self) -> tuple[BlockBase] | tuple:
@@ -84,17 +120,20 @@ class BlockBase(ABC):
 
     @property
     def pos(self):
-        return tuple(self._pos)
+        return self._pos
 
     @pos.setter
-    def pos(self, new_pos: list[int] | tuple[int, int]):
-        self._pos = list(new_pos)
+    def pos(self, new_pos: list[int] | tuple[int, int] | Pos):
+        if isinstance(new_pos, Pos):
+            self._pos = new_pos
+        else:
+            self._pos = Pos(*new_pos)
 
-    def add_pos(self, point: list[int] | tuple[int, int]):
-        self._pos = [self._pos[0] + point[0], self._pos[1] + point[1]]
+    def add_pos(self, point: list[int] | tuple[int, int] | Pos):
+        self._pos += point
 
-    def sub_pos(self, point: list[int] | tuple[int, int]):
-        self._pos = [self._pos[0] - point[0], self._pos[1] - point[1]]
+    def sub_pos(self, point: list[int] | tuple[int, int] | Pos):
+        self._pos -= point
 
     def inside(self, rect: pg.Rect) -> bool:
         br = self.rect
@@ -113,19 +152,19 @@ class StartBlock(BlockBase):
     def execute(self) -> BlockBase:
         return self.next_block[0]
 
-    def draw(self, screen, state: BlockState):
+    def draw(self, screen, state: BlockState, global_offset):
         text = write_text_highlighted(self.content, "center")
         text_size = list(text.get_size())
         text_size[0] += 20
         text_size[1] += 20
         aa_rect(
             screen,
-            pg.Rect(self.pos, text_size),
+            pg.Rect(list(self.pos + global_offset), text_size),
             BLOCK_BG_COLOR,
             text_size[1],
             2,
             _block_state_colors[state])
-        screen.blit(text, (self.pos[0] + 10, self.pos[1] + 10))
+        screen.blit(text, list(self.pos + (10, 10) + global_offset))
 
     def get_size(self):
         text_size = get_text_size(self.content)
@@ -141,19 +180,19 @@ class EndBlock(BlockBase):
     def execute(self):
         return None
 
-    def draw(self, screen, state):
+    def draw(self, screen, state, global_offset):
         text = write_text_highlighted(self.content, "center")
         text_size = list(text.get_size())
         text_size[0] += 20
         text_size[1] += 20
         aa_rect(
             screen,
-            pg.Rect(self.pos, text_size),
+            pg.Rect(list(self.pos + global_offset), text_size),
             BLOCK_BG_COLOR,
             text_size[1],
             2,
             _block_state_colors[state])
-        screen.blit(text, (self.pos[0] + 10, self.pos[1] + 10))
+        screen.blit(text, list(self.pos + (10, 10) + global_offset))
 
     def get_size(self):
         text_size = get_text_size(self.content)
@@ -168,19 +207,19 @@ class IOBlock(BlockBase):
     def execute(self) -> BlockBase:
         return self.next_block[0]
 
-    def draw(self, screen, state):
+    def draw(self, screen, state, global_offset):
         text_surf = write_text_highlighted(self.content, "center")
 
         text_w, text_h = text_surf.get_size()
         block = draw_parallelogram((text_w + 35, text_h + 20), 10, BLOCK_BG_COLOR, _block_state_colors[state])
-        screen.blit(block, self.pos)
+        screen.blit(block, list(self.pos + global_offset))
         info_x = self.pos[0] + text_w + 22
         info_y = self.pos[1] + 2
         if self.is_input:
-            screen.blit(get_image("input.png"), (info_x, info_y))
+            screen.blit(get_image("input.png"), (info_x + global_offset[0], info_y + global_offset[1]))
         else:
-            screen.blit(get_image("output.png"), (info_x, info_y))
-        screen.blit(text_surf, (self.pos[0] + 15, self.pos[1] + 10))
+            screen.blit(get_image("output.png"), (info_x + global_offset[0], info_y + global_offset[1]))
+        screen.blit(text_surf, list(self.pos + (15, 10) + global_offset))
 
     def get_size(self):
         text_size = get_text_size(self.content)
@@ -194,7 +233,7 @@ class _OptionBlock(BlockBase):
     def execute(self) -> BlockBase:
         return self.next_block[0]
 
-    def draw(self, screen, state):
+    def draw(self, screen, state, global_offset):
         raise NotImplementedError("an option block cannot be drawn")
 
     def get_size(self):
@@ -229,21 +268,21 @@ class CondBlock(BlockBase):
     def execute(self) -> BlockBase:
         return self.on_true.next_block[0]
 
-    def draw(self, screen, state):
+    def draw(self, screen, state, global_offset):
         text_surf = write_text_highlighted(self.content, "center")
 
         text_w, text_h = text_surf.get_size()
         block = draw_rombus((text_w * 2 + 20, text_h * 2 + 20), BLOCK_BG_COLOR, _block_state_colors[state])
-        screen.blit(block, self.pos)
-        screen.blit(text_surf, (self.pos[0] + text_w // 2 + 10, self.pos[1] + text_h // 2 + 10))
-        f_pos = list(getattr(self.rect, "mid" + self.out_point[1]))
-        f_pos[1] -= line_height()
-        f_pos[0] += 2
-        t_pos = list(getattr(self.rect, "mid" + self.out_point[0]))
-        t_pos[1] -= line_height()
-        t_pos[0] -= 10
-        screen.blit(write_text("F"), f_pos)
-        screen.blit(write_text("T"), t_pos)
+        screen.blit(block, list(self.pos + global_offset))
+        screen.blit(text_surf, list(self.pos + (text_w // 2 + 10, text_h // 2 + 10) + global_offset))
+        f_pos = Pos(*getattr(self.rect, "mid" + self.out_point[1]))
+        f_pos.y -= line_height()
+        f_pos.x += 2
+        t_pos = Pos(*getattr(self.rect, "mid" + self.out_point[0]))
+        t_pos.y -= line_height()
+        t_pos.x -= 10
+        screen.blit(write_text("F"), list(f_pos + global_offset))
+        screen.blit(write_text("T"), list(t_pos + global_offset))
 
     def get_size(self):
         text_size = get_text_size(self.content)
@@ -257,15 +296,15 @@ class InitBlock(BlockBase):
     def execute(self) -> BlockBase:
         return self.next_block[0]
 
-    def draw(self, screen, state):
+    def draw(self, screen, state, global_offset):
         text_surf = write_text_highlighted(self.content, "center")
 
         text_w, text_h = text_surf.get_size()
         block = draw_hexagon(
             (text_w + 40, text_h + 20),
             10, BLOCK_BG_COLOR, _block_state_colors[state])
-        screen.blit(block, self.pos)
-        screen.blit(text_surf, (self.pos[0] + 20, self.pos[1] + 10))
+        screen.blit(block, list(self.pos + global_offset))
+        screen.blit(text_surf, list(self.pos + (20, 10) + global_offset))
 
     def get_size(self):
         text_size = get_text_size(self.content)
@@ -279,7 +318,7 @@ class CalcBlock(BlockBase):
     def execute(self) -> BlockBase:
         return self.next_block[0]
 
-    def draw(self, screen, state):
+    def draw(self, screen, state, global_offset):
         text_surf = write_text_highlighted(self.content, "center")
 
         text_w, text_h = text_surf.get_size()
@@ -288,8 +327,8 @@ class CalcBlock(BlockBase):
             pg.Rect(0, 0, text_w + 20, text_h + 20),
             BLOCK_BG_COLOR,
             0, 2, _block_state_colors[state])
-        screen.blit(block, self.pos)
-        screen.blit(text_surf, (self.pos[0] + 10, self.pos[1] + 10))
+        screen.blit(block, list(self.pos + global_offset))
+        screen.blit(text_surf, list(self.pos + (10, 10)))
 
     def get_size(self):
         text_size = get_text_size(self.content)

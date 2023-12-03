@@ -464,7 +464,7 @@ def get_image(path, is_transparent=False):
     return image
 
 
-def draw_arrow(screen, p1_rect: pg.Rect, p1_dir, p2_rect: pg.Rect, p2_dir):
+def draw_arrow(screen, p1_rect: pg.Rect, p1_dir, p2_rect: pg.Rect, p2_dir, global_offset):
     p1 = list(getattr(p1_rect, "mid" + p1_dir))
     p2 = list(getattr(p2_rect, "mid" + p2_dir))
     margin = 15
@@ -489,7 +489,13 @@ def draw_arrow(screen, p1_rect: pg.Rect, p1_dir, p2_rect: pg.Rect, p2_dir):
     elif p2_dir == "bottom":
         p2[1] += margin
 
-    pg.draw.line(screen, ARROW_COLOR, p1, orig_p1, 2)
+    pg.draw.line(
+        screen,
+        ARROW_COLOR,
+        (p1[0] + global_offset[0], p1[1] + global_offset[1]),
+        (orig_p1[0] + global_offset[0], orig_p1[1] + global_offset[1]),
+        2
+    )
     points = [p1]
     inverted = False
 
@@ -623,17 +629,19 @@ def draw_arrow(screen, p1_rect: pg.Rect, p1_dir, p2_rect: pg.Rect, p2_dir):
         p1_dir, p2_dir = p2_dir, p1_dir
     else:
         points += [p2]
+    for i in range(len(points)):
+        points[i] = [points[i][0] + global_offset[0], points[i][1] + global_offset[1]]
     pg.draw.lines(screen, ARROW_COLOR, False, points, 2)
 
     arrow_image = get_image("arrow.png")
     if p2_dir == "left":
         arrow_image = pg.transform.rotate(arrow_image, 90)
-        screen.blit(arrow_image, (orig_p2[0] - margin, orig_p2[1] - margin // 2))
+        screen.blit(arrow_image, (orig_p2[0] - margin + global_offset[0], orig_p2[1] - margin // 2 + global_offset[1]))
     elif p2_dir == "right":
         arrow_image = pg.transform.rotate(arrow_image, -90)
-        screen.blit(arrow_image, (orig_p2[0], orig_p2[1] - margin // 2 + 1))
+        screen.blit(arrow_image, (orig_p2[0] + global_offset[0], orig_p2[1] - margin // 2 + 1 + global_offset[1]))
     elif p2_dir == "top":
-        screen.blit(arrow_image, (orig_p2[0] - margin // 2 + 1, orig_p2[1] - margin))
+        screen.blit(arrow_image, (orig_p2[0] - margin // 2 + 1 + global_offset[0], orig_p2[1] - margin + global_offset[1]))
     elif p2_dir == "bottom":
         arrow_image = pg.transform.rotate(arrow_image, 180)
-        screen.blit(arrow_image, (orig_p2[0] - margin // 2, orig_p2[1]))
+        screen.blit(arrow_image, (orig_p2[0] - margin // 2 + global_offset[0], orig_p2[1] + global_offset[1]))
