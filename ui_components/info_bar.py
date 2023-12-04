@@ -1,14 +1,37 @@
 from .blocks import *
 from .constants import (
     PROPERTY_VALUE_COL_WIDTH, INFO_BAR_WIDTH, PROPERTY_H_PADDING, PROPERTY_V_PADDING, PROPERTY_TEXTBOX_PADDING,
-    INFO_BG_DARK, INFO_BG_LIGHT, PROPERTY_BORDER_COLOR
+    INFO_BG_DARK, INFO_BG_LIGHT, PROPERTY_BORDER_COLOR, INFO_BAR_ARROW_SELECTOR_PADDING
 )
-from ui_components.textbox import TextBox
+from .textbox import TextBox
+from .arrow_point_selector import ArrowPointSelector
 
 
 class InfoBar:
     def __init__(self, block: BlockBase):
         self.block = block
+        self.tb_content = None
+        self.arrows_in_selector = None
+        self.arrow1_out_selector = None
+        self.arrow2_out_selector = None
+
+        if not isinstance(block, StartBlock):
+            self.arrows_in_selector = ArrowPointSelector(block.in_point, inward=True)
+
+        if not isinstance(block, CondBlock) and not isinstance(block, EndBlock):
+            self.arrow1_out_selector = ArrowPointSelector(block.out_point[0], inward=False)
+        elif isinstance(block, CondBlock):
+            self.arrow1_out_selector = ArrowPointSelector(block.out_point[0], inward=False)
+            self.arrow2_out_selector = ArrowPointSelector(block.out_point[1], inward=False)
+
+        self.__link_selectors()
+
+        self._properties = [
+            ("Type", self.block.__class__.__name__),
+            ("Position", f"x: {self.block.pos.x}, y: {self.block.pos.y}"),
+            ("Size", f"w: {self.block.get_size()[0]}, h: {self.block.get_size()[1]}"),
+        ]
+
         if block.editable:
             self.tb_content: TextBox | None = TextBox(
                 pg.Rect(
@@ -24,13 +47,27 @@ class InfoBar:
     def __eq__(self, other):
         return id(self.block) == id(other)
 
+    def __link_selectors(self):
+        selectors = []
+        if self.arrows_in_selector is not None:
+            selectors.append(self.arrows_in_selector)
+        if self.arrow1_out_selector is not None:
+            selectors.append(self.arrow1_out_selector)
+        if self.arrow2_out_selector is not None:
+            selectors.append(self.arrow2_out_selector)
+        for selector in selectors:
+            for link in selectors:
+                if link is selector:
+                    continue
+                selector.link_selector(link)
+
     def handle_event(self, event: pg.event.Event) -> bool:
         if event.type == pg.MOUSEBUTTONDOWN or event.type == pg.MOUSEBUTTONUP:
             if pg.display.get_window_size()[0] - event.pos[0] > INFO_BAR_WIDTH:
                 return False
 
         if self.tb_content is None:
-            if event.type == pg.MOUSEBUTTONDOWN or event.type == pg.MOUSEBUTTONUP:
+            if event.type == pg.MOUSEBUTTONDOWN:
                 return True
             return False
 
@@ -45,7 +82,7 @@ class InfoBar:
                 self.tb_content.focused = False
         if self.tb_content.focused:
             result = self.tb_content.handle_event(event)
-        if event.type == pg.MOUSEBUTTONDOWN or event.type == pg.MOUSEBUTTONUP:
+        if event.type == pg.MOUSEBUTTONDOWN:
             return True
         return result
 
@@ -53,17 +90,78 @@ class InfoBar:
         if self.tb_content is not None:
             self.block.content = self.tb_content.text
 
-        rect_x = screen.get_width() - INFO_BAR_WIDTH
+        screen_w = screen.get_width()
         screen_h = screen.get_height()
+
+        rect_x = screen_w - INFO_BAR_WIDTH
+        screen_h = screen_h
         pg.draw.rect(screen, INFO_BG_DARK, pg.Rect(rect_x, 0, INFO_BAR_WIDTH, screen_h))
 
         self.__draw_properties(screen)
+        self.__draw_point_selectors(screen)
+
         if self.tb_content is not None:
-            self.tb_content.rect.right = screen.get_width() - PROPERTY_TEXTBOX_PADDING
-            self.tb_content.rect.bottom = screen.get_height() - PROPERTY_TEXTBOX_PADDING
+            self.tb_content.rect.right = screen_w - PROPERTY_TEXTBOX_PADDING
+            self.tb_content.rect.bottom = screen_h - PROPERTY_TEXTBOX_PADDING
             self.tb_content.draw(screen)
 
         pg.draw.line(screen, PROPERTY_BORDER_COLOR, (rect_x - 2, 0), (rect_x - 2, screen_h), 2)
+
+    @staticmethod
+    def __draw_one_selector(screen, name, selector, current_y):
+        screen.blit(
+            write_text(name),
+            (screen.get_width() - INFO_BAR_WIDTH + INFO_BAR_ARROW_SELECTOR_PADDING, current_y)
+        )
+        current_y += INFO_BAR_ARROW_SELECTOR_PADDING * 2 + line_height()
+        selector.pos = (
+            screen.get_width() - INFO_BAR_WIDTH // 2 - selector.size[0] // 2,
+            current_y
+        )
+        selector.draw(screen)
+        return current_y + selector.size[1] + INFO_BAR_ARROW_SELECTOR_PADDING
+
+    @staticmethod
+    def __draw_two_selectors(screen, name1, name2, selector1, selector2, current_y):
+        screen.blit(
+            write_text(name1),
+            (screen.get_width() - INFO_BAR_WIDTH + INFO_BAR_ARROW_SELECTOR_PADDING, current_y)
+        )
+        screen.blit(
+            write_text(name2),
+            (screen.get_width() - INFO_BAR_WIDTH // 2 + INFO_BAR_ARROW_SELECTOR_PADDING, current_y)
+        )
+        current_y += INFO_BAR_ARROW_SELECTOR_PADDING * 2 + line_height()
+        selector1.pos = (
+            screen.get_width() - int(INFO_BAR_WIDTH * (3/4)) - selector1.size[0] // 2,
+            current_y
+        )
+        selector1.draw(screen)
+
+        selector2.pos = (
+            screen.get_width() - int(INFO_BAR_WIDTH * (1/4)) - selector2.size[0] // 2,
+            current_y
+        )
+        selector2.draw(screen)
+
+        return current_y + selector1.size[1] + INFO_BAR_ARROW_SELECTOR_PADDING
+
+    def __draw_point_selectors(self, screen):
+        current_y = len(self._properties) * (line_height() + PROPERTY_V_PADDING * 2)
+        current_y += INFO_BAR_ARROW_SELECTOR_PADDING
+
+        if self.arrows_in_selector is not None:
+            current_y = self.__draw_one_selector(screen, "Arrows-in point:", self.arrows_in_selector, current_y)
+
+        if self.arrow1_out_selector is not None and self.arrow2_out_selector is None:
+            self.__draw_one_selector(screen, "Arrow-out point:", self.arrow1_out_selector, current_y)
+        elif self.arrow1_out_selector is not None and self.arrow2_out_selector is not None:
+            self.__draw_two_selectors(
+                screen,
+                "True point:", "False point:",
+                self.arrow1_out_selector, self.arrow2_out_selector,
+                current_y
+            )
 
     def __draw_properties(self, screen):
         screen_w = screen.get_width()
@@ -76,13 +174,13 @@ class InfoBar:
             PROPERTY_VALUE_COL_WIDTH, screen_h)
         lh = line_height() + PROPERTY_V_PADDING * 2
 
-        properties = [
+        self._properties = [
             ("Type", self.block.__class__.__name__),
             ("Position", f"x: {self.block.pos.x}, y: {self.block.pos.y}"),
             ("Size", f"w: {self.block.get_size()[0]}, h: {self.block.get_size()[1]}"),
         ]
 
-        for i, (p_name, p_val) in enumerate(properties):
+        for i, (p_name, p_val) in enumerate(self._properties):
             line_rect = pg.Rect(property_name_col.x, lh * i, property_name_col.w + property_value_col.w, lh)
             if i % 2 == 0:
                 pg.draw.rect(screen, INFO_BG_DARK, line_rect)

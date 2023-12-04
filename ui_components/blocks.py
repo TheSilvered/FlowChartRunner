@@ -14,6 +14,7 @@ from typing import Iterable
 from enum import Enum, auto
 from dataclasses import dataclass
 from asset_manager import get_image
+from .arrow_point_selector import ArrowDirection
 
 
 @dataclass
@@ -71,8 +72,8 @@ class BlockBase(ABC):
         self.content: str = content
         self._next_block: BlockBase | None = None
         self._pos: Pos = Pos(0, 0)
-        self.in_point = "top"
-        self.out_point = ["bottom"]
+        self.in_point: ArrowDirection = ArrowDirection.TOP
+        self.out_point: list[ArrowDirection] = [ArrowDirection.BOTTOM]
         self._editable = True
 
         if prev_block is None:
@@ -248,7 +249,7 @@ class CondBlock(BlockBase):
         super().__init__(content, prev_block)
         self.on_true = _OptionBlock()
         self.on_false = _OptionBlock()
-        self.out_point = ["left", "right"]
+        self.out_point = [ArrowDirection.LEFT, ArrowDirection.RIGHT]
 
     @property
     def next_block(self):
