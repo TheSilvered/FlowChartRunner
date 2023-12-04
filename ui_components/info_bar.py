@@ -62,33 +62,40 @@ class InfoBar:
                 selector.link_selector(link)
 
     def handle_event(self, event: pg.event.Event) -> bool:
-        if event.type == pg.MOUSEBUTTONDOWN or event.type == pg.MOUSEBUTTONUP:
-            if pg.display.get_window_size()[0] - event.pos[0] > INFO_BAR_WIDTH:
-                return False
-
-        if self.tb_content is None:
-            if event.type == pg.MOUSEBUTTONDOWN:
-                return True
-            return False
-
-        result = False
-
-        if event.type == pg.MOUSEBUTTONDOWN and not self.tb_content.focused:
+        if event.type == pg.MOUSEBUTTONDOWN and self.tb_content is not None and not self.tb_content.focused:
             if self.tb_content.rect.collidepoint(event.pos):
                 self.tb_content.focused = True
                 return True
-        elif event.type == pg.MOUSEBUTTONUP and self.tb_content.focused:
+        elif event.type == pg.MOUSEBUTTONUP and self.tb_content is not None and self.tb_content.focused:
             if not self.tb_content.rect.collidepoint(event.pos):
                 self.tb_content.focused = False
-        if self.tb_content.focused:
-            result = self.tb_content.handle_event(event)
-        if event.type == pg.MOUSEBUTTONDOWN:
+
+        if self.tb_content is not None and self.tb_content.focused and self.tb_content.handle_event(event):
             return True
-        return result
+
+        if self.arrows_in_selector is not None and self.arrows_in_selector.handle_event(event):
+            return True
+        if self.arrow1_out_selector is not None and self.arrow1_out_selector.handle_event(event):
+            return True
+        if self.arrow2_out_selector is not None and self.arrow2_out_selector.handle_event(event):
+            return True
+
+        if event.type == pg.MOUSEBUTTONDOWN and pg.display.get_window_size()[0] - event.pos[0] <= INFO_BAR_WIDTH:
+            return True
+
+        return False
 
     def draw(self, screen):
         if self.tb_content is not None:
             self.block.content = self.tb_content.text
+        if self.arrows_in_selector is not None:
+            self.block.in_point = self.arrows_in_selector.direction
+        if self.arrow1_out_selector is not None and self.arrow2_out_selector is None:
+            self.block.out_point = self.arrow1_out_selector.direction
+        elif self.arrow1_out_selector is not None and self.arrow2_out_selector is not None:
+            self.block: CondBlock
+            self.block.on_true.out_point = self.arrow1_out_selector.direction
+            self.block.on_false.out_point = self.arrow2_out_selector.direction
 
         screen_w = screen.get_width()
         screen_h = screen.get_height()

@@ -64,6 +64,46 @@ class ArrowPointSelector:
         else:
             return pg.transform.rotate(arrow_image, -90)
 
+    def __get_image_rect(self, direction):
+        if direction == self.direction or direction in [s.direction for s in self.links]:
+            return None
+
+        arrow_image = self.__get_image(direction)
+
+        if direction == ArrowDirection.TOP:
+            pos = (self.rect.centerx - arrow_image.get_width() // 2, self.rect.top)
+        elif direction == ArrowDirection.LEFT:
+            pos = (self.rect.left, self.rect.centery - arrow_image.get_height() // 2)
+        elif direction == ArrowDirection.BOTTOM:
+            pos = (self.rect.centerx - arrow_image.get_width() // 2, self.rect.bottom - arrow_image.get_height())
+        else:
+            pos = (self.rect.right - arrow_image.get_width(), self.rect.centery - arrow_image.get_height() // 2)
+        return pg.Rect(pos, arrow_image.get_size())
+
+    def handle_event(self, event):
+        if event.type != pg.MOUSEBUTTONDOWN:
+            return False
+        if not self.rect.collidepoint(event.pos):
+            return False
+
+        top_rect = self.__get_image_rect(ArrowDirection.TOP)
+        if top_rect is not None and top_rect.collidepoint(event.pos):
+            self.direction = ArrowDirection.TOP
+            return True
+        bottom_rect = self.__get_image_rect(ArrowDirection.BOTTOM)
+        if bottom_rect is not None and bottom_rect.collidepoint(event.pos):
+            self.direction = ArrowDirection.BOTTOM
+            return True
+        left_rect = self.__get_image_rect(ArrowDirection.LEFT)
+        if left_rect is not None and left_rect.collidepoint(event.pos):
+            self.direction = ArrowDirection.LEFT
+            return True
+        right_rect = self.__get_image_rect(ArrowDirection.RIGHT)
+        if right_rect is not None and right_rect.collidepoint(event.pos):
+            self.direction = ArrowDirection.RIGHT
+            return True
+        return False
+
     def draw(self, screen):
         arrow_image = self.__get_image(ArrowDirection.TOP)
 

@@ -201,10 +201,10 @@ def _draw_arrow(screen, p1_rect: pg.Rect, p1_dir, p2_rect: pg.Rect, p2_dir, glob
         pos = (orig_p2[0] - margin + global_offset[0], orig_p2[1] - margin // 2 + global_offset[1])
         arrow_tips.add((pos, 90))
     elif p2_dir == "right":
-        pos = (orig_p2[0] - margin + global_offset[0], orig_p2[1] - margin // 2 + global_offset[1])
+        pos = (orig_p2[0] + global_offset[0], orig_p2[1] - margin // 2 + global_offset[1] + 1)
         arrow_tips.add((pos, -90))
     elif p2_dir == "top":
-        pos = (orig_p2[0] - margin//2 + 1 + global_offset[0], orig_p2[1] - margin + global_offset[1])
+        pos = (orig_p2[0] - margin // 2 + 1 + global_offset[0], orig_p2[1] - margin + global_offset[1])
         arrow_tips.add((pos, 0))
     elif p2_dir == "bottom":
         pos = (orig_p2[0] - margin // 2 + global_offset[0], orig_p2[1] + global_offset[1])
