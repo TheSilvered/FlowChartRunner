@@ -73,7 +73,10 @@ class BlockBase(ABC):
         self._next_block: BlockBase | None = None
         self._pos: Pos = Pos(0, 0)
         self.in_point: ArrowDirection = ArrowDirection.TOP
-        self.out_point: list[ArrowDirection] = [ArrowDirection.BOTTOM]
+        try:
+            self.out_point: ArrowDirection = ArrowDirection.BOTTOM
+        except ValueError:
+            pass
         self._editable = True
 
         if prev_block is None:
@@ -90,7 +93,7 @@ class BlockBase(ABC):
         return self._editable
 
     def __str__(self):
-        return f"{self.__class__.__name__}(next: {', '.join(b.__class__.__name__ for b in self.next_block)})"
+        return f"{self.__class__.__name__}(next: {self.next_block.__class__.__name__})"
 
     def __hash__(self):
         return id(self)
@@ -112,11 +115,8 @@ class BlockBase(ABC):
         return pg.Rect(*self.pos, *self.get_size())
 
     @property
-    def next_block(self) -> tuple[BlockBase] | tuple:
-        if self._next_block is None:
-            return ()
-        else:
-            return self._next_block,
+    def next_block(self) -> BlockBase | None:
+        return self._next_block
 
     @next_block.setter
     def next_block(self, value):
@@ -154,7 +154,7 @@ class StartBlock(BlockBase):
         self._editable = False
 
     def execute(self) -> BlockBase:
-        return self.next_block[0]
+        return self.next_block
 
     def draw(self, screen, state: BlockState, global_offset):
         text = write_text_highlighted(self.content, "center")
@@ -209,7 +209,7 @@ class IOBlock(BlockBase):
         self.is_input = input_
 
     def execute(self) -> BlockBase:
-        return self.next_block[0]
+        return self.next_block
 
     def draw(self, screen, state, global_offset):
         text_surf = write_text_highlighted(self.content, "center")
@@ -231,11 +231,12 @@ class IOBlock(BlockBase):
 
 
 class _OptionBlock(BlockBase):
-    def __init__(self):
+    def __init__(self, out_point):
         super().__init__("")
+        self.out_point = out_point
 
     def execute(self) -> BlockBase:
-        return self.next_block[0]
+        return self.next_block
 
     def draw(self, screen, state, global_offset):
         raise NotImplementedError("an option block cannot be drawn")
@@ -247,21 +248,12 @@ class _OptionBlock(BlockBase):
 class CondBlock(BlockBase):
     def __init__(self, prev_block: _prev_block_t, content: str):
         super().__init__(content, prev_block)
-        self.on_true = _OptionBlock()
-        self.on_false = _OptionBlock()
-        self.out_point = [ArrowDirection.LEFT, ArrowDirection.RIGHT]
+        self.on_true = _OptionBlock(ArrowDirection.LEFT)
+        self.on_false = _OptionBlock(ArrowDirection.RIGHT)
 
     @property
     def next_block(self):
-        if self.on_true.next_block == ():
-            on_true_next_block = None
-        else:
-            on_true_next_block = self.on_true.next_block[0]
-        if self.on_false.next_block == ():
-            on_false_next_block = None
-        else:
-            on_false_next_block = self.on_false.next_block[0]
-        return on_true_next_block, on_false_next_block
+        raise ValueError("cannot get the next block of a conditional block directly")
 
     @next_block.setter
     def next_block(self, value):
@@ -269,8 +261,20 @@ class CondBlock(BlockBase):
             return
         raise ValueError("cannot set the next block of a conditional block directly")
 
+    @property
+    def out_point(self):
+        raise ValueError("cannot get the out_point of a conditional block directly")
+
+    @out_point.setter
+    def out_point(self, value):
+        raise ValueError("cannot set the out_point of a conditional block directly")
+
+    def __str__(self):
+        return f"{self.__class__.__name__}(on_true: {self.on_true.next_block.__class__.__name__}," \
+               f" on_false: {self.on_false.next_block.__class__.__name__})"
+
     def execute(self) -> BlockBase:
-        return self.on_true.next_block[0]
+        return self.on_true.next_block
 
     def draw(self, screen, state, global_offset):
         text_surf = write_text_highlighted(self.content, "center")
@@ -279,10 +283,10 @@ class CondBlock(BlockBase):
         block = draw_rombus((text_w * 2 + 20, text_h * 2 + 20), BLOCK_BG_COLOR, _block_state_colors[state])
         screen.blit(block, list(self.pos + global_offset))
         screen.blit(text_surf, list(self.pos + (text_w // 2 + 10, text_h // 2 + 10) + global_offset))
-        f_pos = Pos(*getattr(self.rect, "mid" + self.out_point[1]))
+        f_pos = Pos(*getattr(self.rect, "mid" + self.on_false.out_point))
         f_pos.y -= line_height()
         f_pos.x += 2
-        t_pos = Pos(*getattr(self.rect, "mid" + self.out_point[0]))
+        t_pos = Pos(*getattr(self.rect, "mid" + self.on_true.out_point))
         t_pos.y -= line_height()
         t_pos.x -= 10
         screen.blit(write_text("F"), list(f_pos + global_offset))
@@ -298,7 +302,7 @@ class InitBlock(BlockBase):
         super().__init__(content, prev_block)
 
     def execute(self) -> BlockBase:
-        return self.next_block[0]
+        return self.next_block
 
     def draw(self, screen, state, global_offset):
         text_surf = write_text_highlighted(self.content, "center")
@@ -320,7 +324,7 @@ class CalcBlock(BlockBase):
         super().__init__(content, prev_block)
 
     def execute(self) -> BlockBase:
-        return self.next_block[0]
+        return self.next_block
 
     def draw(self, screen, state, global_offset):
         text_surf = write_text_highlighted(self.content, "center")

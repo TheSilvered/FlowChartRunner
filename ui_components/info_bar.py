@@ -19,10 +19,10 @@ class InfoBar:
             self.arrows_in_selector = ArrowPointSelector(block.in_point, inward=True)
 
         if not isinstance(block, CondBlock) and not isinstance(block, EndBlock):
-            self.arrow1_out_selector = ArrowPointSelector(block.out_point[0], inward=False)
+            self.arrow1_out_selector = ArrowPointSelector(block.out_point, inward=False)
         elif isinstance(block, CondBlock):
-            self.arrow1_out_selector = ArrowPointSelector(block.out_point[0], inward=False)
-            self.arrow2_out_selector = ArrowPointSelector(block.out_point[1], inward=False)
+            self.arrow1_out_selector = ArrowPointSelector(block.on_true.out_point, inward=False)
+            self.arrow2_out_selector = ArrowPointSelector(block.on_false.out_point, inward=False)
 
         self.__link_selectors()
 

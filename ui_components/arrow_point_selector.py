@@ -22,8 +22,7 @@ class ArrowPointSelector:
         self.links: list[ArrowPointSelector] = []
 
         self.rect = pg.Rect(
-            0,
-            0,
+            0, 0,
             # get_height because image is rotated
             arrow_image.get_height() * 2 + ARROW_POINT_SELECTOR_RECT_W + ARROW_POINT_SELECTOR_PADDING * 2,
             # get_width  because image is rotated

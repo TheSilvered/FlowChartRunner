@@ -6,12 +6,21 @@ from asset_manager import get_image
 def draw_arrows(screen: pg.Surface, blocks, offset):
     arrow_tips = set()
     for b in blocks:
-        for i, nb in enumerate(b.next_block):
-            if nb is None:
+        try:
+            if b.next_block is None:
                 continue
-            in_p_name = nb.in_point
-            out_p_name = b.out_point[i]
-            _draw_arrow(screen, b.rect, out_p_name, nb.rect, in_p_name, offset, arrow_tips)
+            in_p_name = b.next_block.in_point
+            out_p_name = b.out_point
+            _draw_arrow(screen, b.rect, out_p_name, b.next_block.rect, in_p_name, offset, arrow_tips)
+        except ValueError:
+            if b.on_true.next_block is not None:
+                in_p_name = b.on_true.next_block.in_point
+                out_p_name = b.on_true.out_point
+                _draw_arrow(screen, b.rect, out_p_name, b.on_true.next_block.rect, in_p_name, offset, arrow_tips)
+            if b.on_false.next_block is not None:
+                in_p_name = b.on_false.next_block.in_point
+                out_p_name = b.on_false.out_point
+                _draw_arrow(screen, b.rect, out_p_name, b.on_false.next_block.rect, in_p_name, offset, arrow_tips)
 
     arrow_image = get_image("arrow.png")
     for pos, rotation in arrow_tips:

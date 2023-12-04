@@ -1,5 +1,6 @@
-from ui_components.blocks import *
-from .constants import GUIDELINE_COLOR, AXIS_COLOR, EDITOR_BG_COLOR
+from ui_components import StartBlock, EndBlock, BlockBase, IOBlock, CondBlock, InitBlock, CalcBlock, BlockState
+from ui_components.blocks import Pos, _OptionBlock
+from .constants import GUIDELINE_COLOR, AXIS_COLOR, EDITOR_BG_COLOR, SELECTION_BORDER_COLOR
 from text_rendering import line_height
 from ui_components import InfoBar, draw_arrows
 import pygame as pg
@@ -24,17 +25,6 @@ class Editor:
         self.selected_blocks: list[BlockBase] = []
         self.global_offset = [0, 0]
         self.info_bar: InfoBar | None = None
-
-    def __add_blocks(self, start_block):
-        block_set = set()
-        queue = [start_block]
-        for block in queue:
-            if block in block_set:
-                continue
-            self.blocks.append(block)
-            block_set.add(block)
-            for next_block in block.next_block:
-                queue.append(next_block)
 
     def intersect_point(self, point) -> BlockBase | None:
         point = list(Pos(*point) - self.global_offset)
@@ -150,26 +140,27 @@ class Editor:
                 var_block = InitBlock(None, "")
                 self.blocks.append(var_block)
 
-            if len(self.selected_blocks) != 1:
-                return
+            if event.key in (pg.K_DELETE, pg.K_BACKSPACE) and len(self.selected_blocks) == 1:
+                self.delete_block(self.selected_blocks[0])
 
-            block = self.selected_blocks[0]
-            if event.key == pg.K_UP:
-                block.out_point[0] = "top"
-            elif event.key == pg.K_DOWN:
-                block.out_point[0] = "bottom"
-            elif event.key == pg.K_LEFT:
-                block.out_point[0] = "left"
-            elif event.key == pg.K_RIGHT:
-                block.out_point[0] = "right"
-            elif event.key == pg.K_KP8:
-                block.in_point = "top"
-            elif event.key == pg.K_KP2:
-                block.in_point = "bottom"
-            elif event.key == pg.K_KP4:
-                block.in_point = "left"
-            elif event.key == pg.K_KP6:
-                block.in_point = "right"
+    def delete_block(self, block):
+        # These blocks cannot be deleted
+        if isinstance(block, StartBlock) or isinstance(block, EndBlock) or isinstance(block, _OptionBlock):
+            return
+
+        for b in self.blocks:
+            try:
+                if block is b.next_block:
+                    b.next_block = None
+            except ValueError:
+                b: CondBlock
+                if block is b.on_true.next_block:
+                    b.on_true.next_block = None
+                if block is b.on_false.next_block:
+                    b.on_false.next_block = None
+
+        self.blocks.remove(block)
+        self.selected_blocks.pop()
 
     def __update_info_bar(self):
         if len(self.selected_blocks) != 1:
