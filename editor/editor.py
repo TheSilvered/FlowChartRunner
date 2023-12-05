@@ -7,9 +7,10 @@ import pygame as pg
 
 
 class Editor:
-    def __init__(self):
-        start_block = StartBlock()
-        end_block = EndBlock(start_block)
+    def __init__(self, language):
+        start_block = StartBlock(language.StartBlock.content)
+        end_block = EndBlock(start_block, language.EndBlock.content)
+        self.langauge = language
 
         start_block.pos = [0, 0]
         end_block_x = (start_block.get_size()[0] - end_block.get_size()[0]) / 2 + start_block.pos[0]
@@ -131,7 +132,11 @@ class Editor:
                 output_block = IOBlock(None, "", False)
                 self.blocks.append(output_block)
             elif event.key == pg.K_c:
-                cond_block = CondBlock(None, "")
+                cond_block = CondBlock(
+                    None, "",
+                    self.langauge.CondBlock.true_branch.name,
+                    self.langauge.CondBlock.false_branch.name
+                )
                 self.blocks.append(cond_block)
             elif event.key == pg.K_n:
                 calc_block = CalcBlock(None, "")
@@ -166,7 +171,7 @@ class Editor:
         if len(self.selected_blocks) != 1:
             self.info_bar = None
         elif self.info_bar != self.selected_blocks[0]:
-            self.info_bar = InfoBar(self.selected_blocks[0])
+            self.info_bar = InfoBar(self.selected_blocks[0], self.langauge)
 
     def __draw_background_grid(self, screen):
         screen_w = screen.get_width()

@@ -246,10 +246,12 @@ class _OptionBlock(BlockBase):
 
 
 class CondBlock(BlockBase):
-    def __init__(self, prev_block: _prev_block_t, content: str):
+    def __init__(self, prev_block: _prev_block_t, content: str, true_branch: str = "T", false_branch: str = "F"):
         super().__init__(content, prev_block)
         self.on_true = _OptionBlock(ArrowDirection.LEFT)
         self.on_false = _OptionBlock(ArrowDirection.RIGHT)
+        self.true_branch = true_branch
+        self.false_branch = false_branch
 
     @property
     def next_block(self):
@@ -276,6 +278,21 @@ class CondBlock(BlockBase):
     def execute(self) -> BlockBase:
         return self.on_true.next_block
 
+    def __draw_branch(self, screen, name, direction, global_offset):
+        text = write_text(name)
+        text_rect = pg.Rect((0, 0), text.get_size())
+        if direction == ArrowDirection.TOP:
+            text_rect.bottomleft = self.rect.midtop
+        elif direction == ArrowDirection.BOTTOM:
+            text_rect.topleft = self.rect.midbottom
+        elif direction == ArrowDirection.LEFT:
+            text_rect.bottomright = self.rect.midleft
+        else:
+            text_rect.bottomleft = self.rect.midright
+        text_rect.x += global_offset[0]
+        text_rect.y += global_offset[1]
+        screen.blit(text, text_rect)
+
     def draw(self, screen, state, global_offset):
         text_surf = write_text_highlighted(self.content, "center")
 
@@ -283,14 +300,8 @@ class CondBlock(BlockBase):
         block = draw_rombus((text_w * 2 + 20, text_h * 2 + 20), BLOCK_BG_COLOR, _block_state_colors[state])
         screen.blit(block, list(self.pos + global_offset))
         screen.blit(text_surf, list(self.pos + (text_w // 2 + 10, text_h // 2 + 10) + global_offset))
-        f_pos = Pos(*getattr(self.rect, "mid" + self.on_false.out_point))
-        f_pos.y -= line_height()
-        f_pos.x += 2
-        t_pos = Pos(*getattr(self.rect, "mid" + self.on_true.out_point))
-        t_pos.y -= line_height()
-        t_pos.x -= 10
-        screen.blit(write_text("F"), list(f_pos + global_offset))
-        screen.blit(write_text("T"), list(t_pos + global_offset))
+        self.__draw_branch(screen, self.true_branch, self.on_true.out_point, global_offset)
+        self.__draw_branch(screen, self.false_branch, self.on_false.out_point, global_offset)
 
     def get_size(self):
         text_size = get_text_size(self.content)

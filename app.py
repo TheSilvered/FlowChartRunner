@@ -1,7 +1,8 @@
 import pygame as pg
 from editor import Editor
 from text_rendering import load_font
-from asset_manager import set_asset_path
+from asset_manager import set_asset_path, full_asset_path
+from language_manager import Language
 
 
 class App:
@@ -11,7 +12,8 @@ class App:
         pg.display.set_caption("FlowChart Runner")
         set_asset_path("_assets")
         load_font()
-        self.editor = Editor()
+        language = Language(full_asset_path("lang/italian.txt"))
+        self.editor = Editor(language)
         self.running = True
 
     def handle_events(self):
