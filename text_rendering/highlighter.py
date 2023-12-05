@@ -85,6 +85,7 @@ def highlight_string(text: str, i: int) -> tuple[str, int]:
             continue
         i += 1
         if i >= len(text):
+            string += "$"
             break
         if text[i] in '"$':
             string += HC_STRS["light_blue"] + "$" + text[i] + HC_STRS["green"]

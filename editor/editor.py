@@ -21,11 +21,22 @@ class Editor:
         self.has_moved = False
         self.dragging_global = False
         self.selecting = False
+        self._pending_next_block = None
+        self.fake_pending_next_block = None
         self.select_start = (0, 0)
         self.select_area = pg.Rect(-1, -1, 0, 0)
         self.selected_blocks: list[BlockBase] = []
         self.global_offset = [0, 0]
         self.info_bar: InfoBar | None = None
+
+    @property
+    def pending_next_block(self):
+        return self._pending_next_block
+
+    @pending_next_block.setter
+    def pending_next_block(self, value):
+        self._pending_next_block = value
+        self.fake_pending_next_block = value
 
     def intersect_point(self, point) -> BlockBase | None:
         point = list(Pos(*point) - self.global_offset)
@@ -71,12 +82,19 @@ class Editor:
     def __handle_mouse_button_down_event(self, event):
         if event.button == pg.BUTTON_RIGHT:
             self.dragging_global = True
+            self.pending_next_block = None
             return
         elif event.button != pg.BUTTON_LEFT:
             return
 
         block = self.intersect_point(event.pos)
         if block is not None:
+            if self.pending_next_block is not None:
+                if not isinstance(block, StartBlock):
+                    self.pending_next_block.next_block = block
+                self.pending_next_block = None
+                return
+
             if block not in self.selected_blocks:
                 self.selected_blocks = [block]
             self.dragging_blocks = self.selected_blocks
@@ -85,8 +103,10 @@ class Editor:
         self.selecting = True
         self.select_start = event.pos
         self.select_area = pg.Rect(event.pos, (0, 0))
+        self.pending_next_block = None
 
     def __handle_mouse_button_up_event(self, event):
+        self.pending_next_block = None
         if event.button == pg.BUTTON_RIGHT:
             self.dragging_global = False
             return
@@ -116,6 +136,7 @@ class Editor:
 
     def handle_event(self, event: pg.event.Event):
         if self.info_bar is not None and self.info_bar.handle_event(event):
+            self.pending_next_block = None
             return
 
         if event.type == pg.MOUSEBUTTONDOWN:
@@ -144,9 +165,30 @@ class Editor:
             elif event.key == pg.K_v:
                 var_block = InitBlock(None, "")
                 self.blocks.append(var_block)
-
-            if event.key in (pg.K_DELETE, pg.K_BACKSPACE) and len(self.selected_blocks) == 1:
-                self.delete_block(self.selected_blocks[0])
+            elif event.key == pg.K_w and len(self.selected_blocks) == 1:
+                self.pending_next_block = self.selected_blocks[0]
+                if isinstance(self.selected_blocks[0], EndBlock) or isinstance(self.selected_blocks[0], CondBlock):
+                    self.pending_next_block = None
+                else:
+                    self.selected_blocks = []
+            elif event.key == pg.K_t and len(self.selected_blocks) == 1:
+                if not isinstance(self.selected_blocks[0], CondBlock):
+                    return
+                self.pending_next_block = self.selected_blocks[0].on_true
+                self.fake_pending_next_block = self.selected_blocks[0]
+                self.selected_blocks = []
+            elif event.key == pg.K_f and len(self.selected_blocks) == 1:
+                if not isinstance(self.selected_blocks[0], CondBlock):
+                    return
+                self.pending_next_block = self.selected_blocks[0].on_false
+                self.fake_pending_next_block = self.selected_blocks[0]
+                self.selected_blocks = []
+            elif event.key in (pg.K_DELETE, pg.K_BACKSPACE):
+                if len(self.selected_blocks) == 1:
+                    self.delete_block(self.selected_blocks[0])
+                elif self.pending_next_block is not None:
+                    self.pending_next_block.next_block = None
+                    self.pending_next_block = None
 
     def delete_block(self, block):
         # These blocks cannot be deleted
@@ -195,11 +237,12 @@ class Editor:
         draw_arrows(screen, self.blocks, self.global_offset)
 
         for block in self.blocks:
-            block.draw(
-                screen,
-                BlockState.SELECTED if block in self.selected_blocks else BlockState.IDLE,
-                self.global_offset
-            )
+            state = BlockState.IDLE
+            if block in self.selected_blocks:
+                state = BlockState.SELECTED
+            elif block is self.fake_pending_next_block:
+                state = BlockState.PENDING_NEXT_BLOCK
+            block.draw(screen, state, self.global_offset)
 
         if self.info_bar is not None:
             self.info_bar.draw(screen)

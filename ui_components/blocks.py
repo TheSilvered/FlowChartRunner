@@ -8,7 +8,8 @@ from .constants import (
     BLOCK_BORDER_COLOR,
     SELECTION_BORDER_COLOR,
     RUNNING_BORDER_COLOR,
-    ERROR_BORDER_COLOR
+    ERROR_BORDER_COLOR,
+    PENDING_NEXT_BLOCK_BORDER_COLOR
 )
 from typing import Iterable
 from enum import Enum, auto
@@ -57,13 +58,15 @@ class BlockState(Enum):
     SELECTED = auto()
     RUNNING = auto()
     ERROR = auto()
+    PENDING_NEXT_BLOCK = auto()
 
 
 _block_state_colors = {
     BlockState.IDLE: BLOCK_BORDER_COLOR,
     BlockState.SELECTED: SELECTION_BORDER_COLOR,
     BlockState.RUNNING: RUNNING_BORDER_COLOR,
-    BlockState.ERROR: ERROR_BORDER_COLOR
+    BlockState.ERROR: ERROR_BORDER_COLOR,
+    BlockState.PENDING_NEXT_BLOCK: PENDING_NEXT_BLOCK_BORDER_COLOR
 }
 
 
@@ -346,7 +349,7 @@ class CalcBlock(BlockBase):
             pg.Rect(list(self.pos + global_offset), (text_w + 20, text_h + 20)),
             BLOCK_BG_COLOR,
             0, 2, _block_state_colors[state])
-        screen.blit(text_surf, list(self.pos + (10, 10)))
+        screen.blit(text_surf, list(self.pos + (10, 10) + global_offset))
 
     def get_size(self):
         text_size = get_text_size(self.content)
