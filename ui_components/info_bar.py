@@ -29,11 +29,10 @@ class InfoBar:
 
         self.__link_selectors()
 
-        self._properties = [
-            ("Type", self.block.__class__.__name__),
-            ("Position", f"x: {self.block.pos.x}, y: {self.block.pos.y}"),
-            ("Size", f"w: {self.block.get_size()[0]}, h: {self.block.get_size()[1]}"),
-        ]
+        self._properties = [(), (), ()]
+
+        if isinstance(block, IOBlock):
+            self._properties.append(())
 
         if block.editable:
             self.tb_content: TextBox | None = TextBox(
@@ -280,6 +279,12 @@ class InfoBar:
                 self.language.info.size.value.format(w=self.block.get_size()[0], h=self.block.get_size()[1])
             )
         ]
+
+        if isinstance(self.block, IOBlock):
+            self._properties.append((
+                self.language.info.input.name,
+                self.language.info.input.value_true if self.block.is_input else self.language.info.input.value_false
+            ))
 
         for i, (p_name, p_val) in enumerate(self._properties):
             line_rect = pg.Rect(property_name_col.x, lh * i + current_y, property_name_col.w + property_value_col.w, lh)

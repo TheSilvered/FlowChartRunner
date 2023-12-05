@@ -20,3 +20,6 @@ info.out_point_selectors.name=Frecce in uscita
 info.true_out_point_selector.name=Vero
 info.false_out_point_selector.name=Falso
 info.content_textbox.placeholder=Inserisci i contenuti...
+info.input.name=Input
+info.input.value_true=Sì
+info.input.value_false=No

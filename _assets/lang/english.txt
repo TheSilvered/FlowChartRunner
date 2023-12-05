@@ -20,3 +20,6 @@ info.out_point_selectors.name=Arrows out
 info.true_out_point_selector.name=On true
 info.false_out_point_selector.name=On false
 info.content_textbox.placeholder=Insert contents...
+info.input.name=Input
+info.input.value_true=Yes
+info.input.value_false=No
