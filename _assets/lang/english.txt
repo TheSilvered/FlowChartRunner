@@ -8,18 +8,31 @@ StartBlock.content=START
 EndBlock.content=END
 CondBlock.true_branch.name=T
 CondBlock.false_branch.name=F
+
 info.type.name=Type
 info.type.value={name}
 info.position.name=Position
 info.position.value=x: {x}, y: {y}
 info.size.name=Size
 info.size.value=w: {w}, h: {h}
+info.input.name=Input
+info.input.value_true=Yes
+info.input.value_false=No
+
 info.in_point_selector.name=Arrows in
 info.out_point_selector.name=Arrow out
 info.out_point_selectors.name=Arrows out
 info.true_out_point_selector.name=On true
 info.false_out_point_selector.name=On false
 info.content_textbox.placeholder=Insert contents...
-info.input.name=Input
-info.input.value_true=Yes
-info.input.value_false=No
+
+error.name.type_error=Type Error
+error.name.math_error=Math Error
+error.name.syntax_error=Syntax Error
+
+error.msg.invalid_op_types='{operand}' cannot be applied to {left_type} and {right_type}
+error.msg.invalid_uni_op_types='{operand}' cannot be applied to {op_type}
+error.msg.division_by_zero=division by zero
+error.msg.negative_root=root with a negative argument
+error.msg.invalid_cast={op_type} object cannot be converted to {cast_type}
+error.msg.invalid_num_literal=invalid number

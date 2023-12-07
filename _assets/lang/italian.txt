@@ -8,18 +8,31 @@ StartBlock.content=INIZIO
 EndBlock.content=FINE
 CondBlock.true_branch.name=V
 CondBlock.false_branch.name=F
+
 info.type.name=Tipo
 info.type.value={name}
 info.position.name=Posizione
 info.position.value=x: {x}, y: {y}
 info.size.name=Dimensione
 info.size.value=l: {w}, a: {h}
+info.input.name=Input
+info.input.value_true=Sì
+info.input.value_false=No
+
 info.in_point_selector.name=Frecce in entrata
 info.out_point_selector.name=Freccia in uscita
 info.out_point_selectors.name=Frecce in uscita
 info.true_out_point_selector.name=Vero
 info.false_out_point_selector.name=Falso
 info.content_textbox.placeholder=Inserisci i contenuti...
-info.input.name=Input
-info.input.value_true=Sì
-info.input.value_false=No
+
+error.name.type_error=Errore di Tipo
+error.name.math_error=Errore Matematico
+error.name.syntax_error=Errore di Sintassi
+
+error.msg.invalid_op_types='{operand}' non può essere applicato a {left_type} e {right_type}
+error.msg.invalid_uni_op_types='{operand}' non può essere applicato a {op_type}
+error.msg.division_by_zero=divisione per zero
+error.msg.negative_root=radice con argomento negativo
+error.msg.invalid_cast=oggetto {op_type} non può essere convertito a {cast_type}
+error.msg.invalid_num_literal=numero non valido
