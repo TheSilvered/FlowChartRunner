@@ -32,7 +32,14 @@ class LanguageCategory:
     def __getitem__(self, item):
         if isinstance(item, str) and item.startswith("_"):
             return self.__dict__[item]
-        return self.__getattr__(item)
+        if "." in item:
+            items = item.split(".")
+            curr_item = self
+            for item in items:
+                curr_item = curr_item[item]
+            return curr_item
+        else:
+            return self.__getattr__(item)
 
     def __setitem__(self, key, value):
         self.__setattr__(key, value)

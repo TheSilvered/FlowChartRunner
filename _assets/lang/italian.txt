@@ -33,6 +33,7 @@ error.name.syntax_error=Errore di Sintassi
 error.msg.invalid_op_types='{operand}' non può essere applicato a {left_type} e {right_type}
 error.msg.invalid_uni_op_types='{operand}' non può essere applicato a {op_type}
 error.msg.division_by_zero=divisione per zero
+error.msg.modulo_by_zero=modulo per zero
 error.msg.negative_root=radice con argomento negativo
 error.msg.invalid_cast=oggetto {op_type} non può essere convertito a {cast_type}
 error.msg.invalid_num_literal=numero non valido

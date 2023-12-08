@@ -1,6 +1,7 @@
 from __future__ import annotations
 from abc import ABC
 from enum import Enum
+from .error import ExecutionError
 
 
 class ExeValueType(Enum):
@@ -54,7 +55,7 @@ class ExeBoolean(ExeValue):
 
 class ExeError(ExeValue):
     def __init__(self, name, msg, **format_args):
-        super().__init__(ExeValueType.ERROR, (name, msg, format_args))
+        super().__init__(ExeValueType.ERROR, ExecutionError(name, msg, **format_args))
 
 
 def _type_error(left, right, op):
@@ -120,6 +121,19 @@ def div_val(left: ExeValue, right: ExeValue) -> ExeValue:
         return ExeNumber(left.value / right.value)
     else:
         return _type_error(left, right, "/")
+
+
+def mod_val(left: ExeValue, right: ExeValue) -> ExeValue:
+    error = _skip_error(left, right)
+    if error is not None:
+        return error
+
+    if left.number() and right.number():
+        if right.value == 0:
+            return ExeError("error.name.math_error", "error.msg.modulo_by_zero")
+        return ExeNumber(left.value % right.value)
+    else:
+        return _type_error(left, right, "%")
 
 
 def pow_val(left: ExeValue, right: ExeValue) -> ExeValue:
@@ -213,9 +227,55 @@ def to_boolean(value: ExeValue) -> ExeValue:
             "error.name.type_error",
             "error.msg.invalid_cast",
             op_type=value.type,
-            cast_type=ExeValueType.BOOLEAN)
+            cast_type=ExeValueType.BOOLEAN
+        )
 
     return ExeBoolean(value.value)
+
+
+def to_string(value: ExeValue) -> ExeValue:
+    if value.error():
+        return value
+
+    if value.empty():
+        return ExeError(
+            "error.name.type_error",
+            "error.msg.invalid_cast",
+            op_type=value.type,
+            cast_type=ExeValueType.STRING
+        )
+
+    return ExeString(str(value.value))
+
+
+def to_number(value: ExeValue) -> ExeValue:
+    if value.error():
+        return value
+
+    if value.empty():
+        return ExeError(
+            "error.name.type_error",
+            "error.msg.invalid_cast",
+            op_type=value.type,
+            cast_type=ExeValueType.NUMBER
+        )
+
+    if value.boolean():
+        return ExeNumber(1 if value.value else 0)
+    elif value.string():
+        try:
+            num = int(value.value)
+        except ValueError:
+            try:
+                num = float(value.value)
+            except ValueError:
+                return ExeError(
+                    "error.name.value_error",
+                    "error.name.bad_num_lit",
+                    literal=value.value
+                )
+        return ExeNumber(num)
+    return value
 
 
 def not_val(value: ExeValue) -> ExeValue:

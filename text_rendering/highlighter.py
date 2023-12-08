@@ -5,7 +5,7 @@ TYPE_NAMES = ("Number", "String", "Boolean")
 CONSTANTS = ("true", "false", "_pi", "_e")
 BUILTIN_FUNCTIONS = ("mod", "sin", "cos", "tan", "arcsin", "arccos", "arctan", "floor", "ceil", "round", "log", "sign",
                      "sqrt", "root")
-ARITH_OPERATORS = "+-*/^="
+ARITH_OPERATORS = "+-*/^=<>%"
 OTHER_SYMBOLS = "()[]{},"
 
 
@@ -62,12 +62,6 @@ def highlight_number(text: str, i: int) -> tuple[str, int]:
 
     if i < len(text) and text[i] == '.':
         i += 1
-        while i < len(text) and text[i].isdigit():
-            i += 1
-    if i < len(text) and text[i] == 'e':
-        i += 1
-        if i < len(text) and text[i] == '+' or text[i] == '-':
-            i += 1
         while i < len(text) and text[i].isdigit():
             i += 1
 

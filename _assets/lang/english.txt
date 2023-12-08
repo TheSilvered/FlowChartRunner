@@ -33,6 +33,7 @@ error.name.syntax_error=Syntax Error
 error.msg.invalid_op_types='{operand}' cannot be applied to {left_type} and {right_type}
 error.msg.invalid_uni_op_types='{operand}' cannot be applied to {op_type}
 error.msg.division_by_zero=division by zero
+error.msg.modulo_by_zero=modulo by zero
 error.msg.negative_root=root with a negative argument
 error.msg.invalid_cast={op_type} object cannot be converted to {cast_type}
 error.msg.invalid_num_literal=invalid number
