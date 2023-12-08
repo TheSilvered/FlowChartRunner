@@ -206,3 +206,23 @@ class CompoundNode(Node):
                 return value
 
         return ExeEmpty()
+
+
+class WriteNode(Node):
+    def __init__(self, node: Node):
+        super().__init__(NodeType.WRITE)
+        self.node = node
+
+    def evaluate(self, sym_table: dict, console: Console) -> ExeValue:
+        value = to_string(self.node.evaluate(sym_table, console))
+        if value.error():
+            return value
+        console.stdout_write(value.value)
+
+
+class ReadNode(Node):
+    def __init__(self):
+        super().__init__(NodeType.READ)
+
+    def evaluate(self, sym_table: dict, console: Console) -> ExeValue:
+        pass

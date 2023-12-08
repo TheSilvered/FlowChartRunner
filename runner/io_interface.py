@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import sys
 
 
 class Console(ABC):
@@ -13,3 +14,14 @@ class Console(ABC):
     @abstractmethod
     def stdin_read(self) -> str:
         pass
+
+
+class TerminalLink(Console):
+    def stdout_write(self, string: str):
+        print(string, file=sys.stdout, flush=True)
+
+    def stderr_write(self, string: str):
+        print(string, file=sys.stderr, flush=True)
+
+    def stdin_read(self) -> str:
+        return input()

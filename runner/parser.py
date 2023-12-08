@@ -19,19 +19,27 @@ class Parser:
         self.tokens = tokens
         self.idx = 0
 
-    def parse_input_block(self):
+    def parse_input_block(self) -> Node | ExecutionError:
+        if self.tok != (TokenType.KEYWORD, "read"):
+            return ExecutionError("error.name.syntax_error", "error.msg.expected_keyword", keyword="read")
+        self.advance()
+
+        nodes = []
+
+        while not self.finished:
+            if self.tok != TokenType.IDENT:
+                return ExecutionError("error.name.syntax_error", "error.msg.expected_keyword", keyword="read")
+
+    def parse_output_block(self) -> Node | ExecutionError:
         pass
 
-    def parse_output_block(self):
+    def parse_cond_block(self) -> Node | ExecutionError:
         pass
 
-    def parse_cond_block(self):
+    def parse_init_block(self) -> Node | ExecutionError:
         pass
 
-    def parse_init_block(self):
-        pass
-
-    def parse_calc_block(self):
+    def parse_calc_block(self) -> Node | ExecutionError:
         pass
 
     @property
