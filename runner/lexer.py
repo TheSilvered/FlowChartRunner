@@ -107,6 +107,7 @@ class Lexer:
     def __make_str(self):
         fmt_string = []
         str_content = ""
+        self.advance()
         while self.ch != '"':
             if self.finished:
                 return ExecutionError("error.name.syntax_error", "error.msg.open_string")

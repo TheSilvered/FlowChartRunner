@@ -1,8 +1,8 @@
 from __future__ import annotations
-from abc import abstractmethod
 from enum import auto
 from .values import *
 from .io_interface import Console
+from enum import Enum
 
 
 class NodeType(Enum):
@@ -49,6 +49,13 @@ class Node(ABC):
     def evaluate(self, sym_table: dict, console: Console) -> ExeValue:
         pass
 
+    @abstractmethod
+    def __str__(self):
+        pass
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class ValueNode(Node):
     def __init__(self, value: ExeValue):
@@ -57,6 +64,9 @@ class ValueNode(Node):
 
     def evaluate(self, sym_table: dict, console: Console) -> ExeValue:
         return self.value
+
+    def __str__(self):
+        return f"ValueNode(value={self.value})"
 
 
 class BinNode(Node):
@@ -108,6 +118,9 @@ class BinNode(Node):
         else:
             raise RuntimeError(f"Unknown BinOp {self.op.name}")
 
+    def __str__(self):
+        return f"BinNode(left_node={self.left_node}, right_node={self.right_node}, op={self.op.name})"
+
 
 class UniNode(Node):
     def __init__(self, node: Node, op: UniOp):
@@ -125,6 +138,9 @@ class UniNode(Node):
         else:
             raise RuntimeError(f"Unknown UniOp {self.op.name}")
 
+    def __str__(self):
+        return f"UniNode(node={self.node}, op={self.op.name})"
+
 
 class FmtNode(Node):
     def __init__(self, fmt_string: list):
@@ -137,10 +153,13 @@ class FmtNode(Node):
             end_str += s
             value = sym_table.get(ident)
             if value is None:
-                return ExeError("error.name.var_error", "error.msg.var_not_defined")
+                return ExeError("error.name.var_error", "error.msg.var_not_defined", var_name=ident)
             end_str += str(value.value)
         end_str += self.fmt_string[-1]
         return ExeString(end_str)
+
+    def __str__(self):
+        return f"FmtNode(fmt_string={self.fmt_string})"
 
 
 class CastNode(Node):
@@ -150,16 +169,10 @@ class CastNode(Node):
         self.type = type_
 
     def evaluate(self, sym_table: dict, console: Console) -> ExeValue:
-        value = self.node.evaluate(sym_table, console)
-        if self.type == ExeValueType.BOOLEAN:
-            value = to_boolean(value)
-        elif self.type == ExeValueType.STRING:
-            value = to_string(value)
-        elif self.type == ExeValueType.NUMBER:
-            value = to_number(value)
-        else:
-            raise RuntimeError(f"Unknown ExeValueType {self.type.name}")
-        return value
+        return cast_val(self.node.evaluate(sym_table, console), self.type)
+
+    def __str__(self):
+        return f"CastNode(node={self.node}, type={self.type})"
 
 
 class GetNode(Node):
@@ -170,8 +183,11 @@ class GetNode(Node):
     def evaluate(self, sym_table: dict, console: Console) -> ExeValue:
         value = sym_table.get(self.name)
         if value is None:
-            return ExeError("error.name.var_error", "error.msg.var_not_defined")
+            return ExeError("error.name.var_error", "error.msg.var_not_defined", var_name=self.name)
         return value
+
+    def __str__(self):
+        return f"GetNode(name={self.name!r})"
 
 
 class SetNode(Node):
@@ -183,9 +199,9 @@ class SetNode(Node):
 
     def evaluate(self, sym_table: dict, console: Console) -> ExeValue:
         if self.init and self.name in sym_table:
-            return ExeError("error.name.var_error", "error.msg.var_already_defined")
+            return ExeError("error.name.var_error", "error.msg.var_already_defined", var_name=self.name)
         elif not self.init and self.name not in sym_table:
-            return ExeError("error.name.var_error", "error.msg.var_not_defined")
+            return ExeError("error.name.var_error", "error.msg.var_not_defined", var_name=self.name)
         value = self.value.evaluate(sym_table, console)
         if value.error():
             return value
@@ -193,19 +209,25 @@ class SetNode(Node):
         sym_table[self.name] = value
         return ExeEmpty()
 
+    def __str__(self):
+        return f"SetNode(name={self.name!r}, value={self.value}, init={self.init})"
+
 
 class CompoundNode(Node):
-    def __init__(self, nodes):
+    def __init__(self, nodes: list[Node]):
         super().__init__(NodeType.COMPOUND)
         self.nodes = nodes
 
     def evaluate(self, sym_table: dict, console: Console) -> ExeValue:
         for node in self.nodes:
-            value = node.evaluate()
-            if value.error:
+            value = node.evaluate(sym_table, console)
+            if value.error():
                 return value
 
         return ExeEmpty()
+
+    def __str__(self):
+        return f"CompoundNode(nodes={self.nodes})"
 
 
 class WriteNode(Node):
@@ -218,11 +240,33 @@ class WriteNode(Node):
         if value.error():
             return value
         console.stdout_write(value.value)
+        return ExeEmpty()
+
+    def __str__(self):
+        return f"WriteNode(node={self.node})"
 
 
 class ReadNode(Node):
-    def __init__(self):
+    def __init__(self, name: str, type_: ExeValueType):
         super().__init__(NodeType.READ)
+        self.name = name
+        self.type = type_
 
     def evaluate(self, sym_table: dict, console: Console) -> ExeValue:
-        pass
+        while True:
+            console.stdin_hint(f"{self.name} ({self.type})")
+            value = ExeString(console.stdin_read())
+            if self.type == ExeValueType.BOOLEAN:
+                if "true".startswith(value.value.lower()):
+                    value = ExeBoolean(True)
+                elif "false".startswith(value.value.lower()):
+                    value = ExeBoolean(False)
+                else:
+                    value = ExeError("", "")
+            else:
+                value = cast_val(value, self.type)
+            if not value.error():
+                return value
+
+    def __str__(self):
+        return f"ReadNode(name={self.name!r}, type={self.type})"

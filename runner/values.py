@@ -1,10 +1,9 @@
 from __future__ import annotations
-from abc import ABC
-from enum import Enum
+from abc import ABC, abstractmethod
 from .error import ExecutionError
 
 
-class ExeValueType(Enum):
+class ExeValueType:
     EMPTY = "Empty"
     NUMBER = "Number"
     STRING = "String"
@@ -32,30 +31,52 @@ class ExeValue(ABC):
     def error(self) -> bool:
         return self.type == ExeValueType.ERROR
 
+    @abstractmethod
+    def __str__(self):
+        pass
+
+    def __repr__(self):
+        return str(self)
+
 
 class ExeEmpty(ExeValue):
     def __init__(self):
         super().__init__(ExeValueType.EMPTY, None)
+
+    def __str__(self):
+        return "ExeEmpty()"
 
 
 class ExeNumber(ExeValue):
     def __init__(self, value: int | float):
         super().__init__(ExeValueType.NUMBER, value)
 
+    def __str__(self):
+        return f"ExeNumber({self.value})"
+
 
 class ExeString(ExeValue):
     def __init__(self, value: str):
         super().__init__(ExeValueType.STRING, value)
+
+    def __str__(self):
+        return f"ExeString({self.value!r})"
 
 
 class ExeBoolean(ExeValue):
     def __init__(self, value):
         super().__init__(ExeValueType.BOOLEAN, bool(value))
 
+    def __str__(self):
+        return f"ExeBoolean({self.value})"
+
 
 class ExeError(ExeValue):
     def __init__(self, name, msg, **format_args):
         super().__init__(ExeValueType.ERROR, ExecutionError(name, msg, **format_args))
+
+    def __str__(self):
+        return f"ExeError({self.value})"
 
 
 def _type_error(left, right, op):
@@ -275,6 +296,18 @@ def to_number(value: ExeValue) -> ExeValue:
                     literal=value.value
                 )
         return ExeNumber(num)
+    return value
+
+
+def cast_val(value: ExeValue, type_: ExeValueType) -> ExeValue:
+    if type_ == ExeValueType.BOOLEAN:
+        value = to_boolean(value)
+    elif type_ == ExeValueType.STRING:
+        value = to_string(value)
+    elif type_ == ExeValueType.NUMBER:
+        value = to_number(value)
+    else:
+        raise RuntimeError(f"Unknown ExeValueType {type_}")
     return value
 
 

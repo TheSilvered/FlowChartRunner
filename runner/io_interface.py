@@ -15,6 +15,10 @@ class Console(ABC):
     def stdin_read(self) -> str:
         pass
 
+    @abstractmethod
+    def stdin_hint(self, string: str):
+        pass
+
 
 class TerminalLink(Console):
     def stdout_write(self, string: str):
@@ -24,4 +28,7 @@ class TerminalLink(Console):
         print(string, file=sys.stderr, flush=True)
 
     def stdin_read(self) -> str:
-        return input()
+        return input("> ")
+
+    def stdin_hint(self, string: str):
+        print(string, end=" ")

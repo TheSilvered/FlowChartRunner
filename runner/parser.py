@@ -1,6 +1,30 @@
 from .tokens import Token, TokenType
 from .nodes import *
 from .error import ExecutionError
+from .lexer import Lexer
+from ui_components import IOBlock, CondBlock, InitBlock, CalcBlock, BlockBase
+
+
+def full_compilation(block: BlockBase) -> Node | ExecutionError:
+    lexer = Lexer(block.content)
+    tokens = lexer.tokenize()
+    if isinstance(tokens, ExecutionError):
+        return tokens
+    parser = Parser(tokens)
+    if isinstance(block, IOBlock) and block.is_input:
+        ast = parser.parse_input_block()
+    elif isinstance(block, IOBlock):
+        ast = parser.parse_output_block()
+    elif isinstance(block, CondBlock):
+        ast = parser.parse_cond_block()
+    elif isinstance(block, InitBlock):
+        ast = parser.parse_init_block()
+    elif isinstance(block, CalcBlock):
+        ast = parser.parse_calc_block()
+    else:
+        return ExecutionError("error.name.comp_error", "error.msg.failed_to_compile_block")
+    return ast
+
 
 # Operator precedence
 # or
@@ -26,21 +50,87 @@ class Parser:
 
         nodes = []
 
-        while not self.finished:
+        while True:
             if self.tok != TokenType.IDENT:
-                return ExecutionError("error.name.syntax_error", "error.msg.expected_keyword", keyword="read")
+                return ExecutionError("error.name.syntax_error", "error.msg.expected_ident")
+            ident = self.tok.value
+            self.advance()
+            if self.tok != (TokenType.KEYWORD, "as"):
+                return ExecutionError("error.name.syntax_error", "error.msg.expected_keyword", keyword="as")
+            self.advance()
+            if self.tok != TokenType.TYPE:
+                return ExecutionError("error.name.syntax_error", "error.msg.expected_type", keyword="as")
+            type_ = self.__type_name_to_type(self.tok.value)
+            self.advance()
+
+            nodes.append(SetNode(ident, ReadNode(ident, type_), True))
+            if self.tok != TokenType.COMMA:
+                break
+            self.advance()
+
+        if not self.finished:
+            return ExecutionError("error.name.syntax_error", "error.msg.unexpected_token", tok_type=self.tok.type.name)
+        return CompoundNode(nodes)
 
     def parse_output_block(self) -> Node | ExecutionError:
-        pass
+        value = self.parse_expr()
+        if self.is_error(value):
+            return value
+        if not self.finished:
+            return ExecutionError("error.name.syntax_error", "error.msg.unexpected_token", tok_type=self.tok.type.name)
+        return WriteNode(value)
 
     def parse_cond_block(self) -> Node | ExecutionError:
-        pass
+        value = self.parse_expr()
+        if self.is_error(value):
+            return value
+        if not self.finished:
+            return ExecutionError("error.name.syntax_error", "error.msg.unexpected_token", tok_type=self.tok.type.name)
+        return WriteNode(value)
 
     def parse_init_block(self) -> Node | ExecutionError:
-        pass
+        nodes = []
+
+        while True:
+            if self.tok != TokenType.IDENT:
+                return ExecutionError("error.name.syntax_error", "error.msg.expected_ident")
+            ident = self.tok.value
+            self.advance()
+            if self.tok != TokenType.EQUALS:
+                return ExecutionError("error.name.syntax_error", "error.msg.expected_sym", keyword="==")
+            self.advance()
+            value = self.parse_expr()
+            if self.is_error(value):
+                return value
+
+            nodes.append(SetNode(ident, value, True))
+            if self.tok != TokenType.COMMA:
+                break
+            self.advance()
+
+        return CompoundNode(nodes)
 
     def parse_calc_block(self) -> Node | ExecutionError:
-        pass
+        nodes = []
+
+        while True:
+            if self.tok != TokenType.IDENT:
+                return ExecutionError("error.name.syntax_error", "error.msg.expected_ident")
+            ident = self.tok.value
+            self.advance()
+            if self.tok != TokenType.EQUALS:
+                return ExecutionError("error.name.syntax_error", "error.msg.expected_sym", keyword="==")
+            self.advance()
+            value = self.parse_expr()
+            if self.is_error(value):
+                return value
+
+            nodes.append(SetNode(ident, value, False))
+            if self.tok != TokenType.COMMA:
+                break
+            self.advance()
+
+        return CompoundNode(nodes)
 
     @property
     def tok(self):
@@ -148,14 +238,7 @@ class Parser:
         self.advance()
         if self.tok != TokenType.TYPE:
             return ExecutionError("error.name.syntax_error", "error.msg.expected_type")
-        if self.tok.value == "Number":
-            type_ = ExeValueType.NUMBER
-        elif self.tok.value == "Boolean":
-            type_ = ExeValueType.BOOLEAN
-        elif self.tok.value == "String":
-            type_ = ExeValueType.STRING
-        else:
-            raise ValueError(f"Unknown type name {self.tok.value}")
+        type_ = self.__type_name_to_type(self.tok.value)
         self.advance()
         return CastNode(value, type_)
 
@@ -164,15 +247,15 @@ class Parser:
             return ExecutionError("error.name.syntax_error", "error.msg.expected_value")
 
         if self.tok == TokenType.NUMBER:
-            node = ValueNode(ExeValue(ExeValueType.NUMBER, self.tok.value))
+            node = ValueNode(ExeNumber(self.tok.value))
             self.advance()
             return node
         elif self.tok == TokenType.BOOLEAN:
-            node = ValueNode(ExeValue(ExeValueType.BOOLEAN, self.tok.value))
+            node = ValueNode(ExeBoolean(self.tok.value))
             self.advance()
             return node
         elif self.tok == TokenType.STRING:
-            node = ValueNode(ExeValue(ExeValueType.STRING, self.tok.value))
+            node = ValueNode(ExeString(self.tok.value))
             self.advance()
             return node
         elif self.tok == TokenType.FORMAT_STRING:
@@ -206,3 +289,15 @@ class Parser:
             return expr
         else:
             return ExecutionError("error.name.syntax_error", "error.msg.unexpected_token", tok_type=self.tok.type.name)
+
+    @staticmethod
+    def __type_name_to_type(type_name):
+        if type_name == "Number":
+            type_ = ExeValueType.NUMBER
+        elif type_name == "Boolean":
+            type_ = ExeValueType.BOOLEAN
+        elif type_name == "String":
+            type_ = ExeValueType.STRING
+        else:
+            raise ValueError(f"Unknown type name {type_name}")
+        return type_
