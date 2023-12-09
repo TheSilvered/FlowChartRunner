@@ -97,7 +97,7 @@ class Parser:
             ident = self.tok.value
             self.advance()
             if self.tok != TokenType.EQUALS:
-                return ExecutionError("error.name.syntax_error", "error.msg.expected_sym", keyword="==")
+                return ExecutionError("error.name.syntax_error", "error.msg.expected_sym", string="==")
             self.advance()
             value = self.parse_expr()
             if self.is_error(value):
@@ -119,7 +119,7 @@ class Parser:
             ident = self.tok.value
             self.advance()
             if self.tok != TokenType.EQUALS:
-                return ExecutionError("error.name.syntax_error", "error.msg.expected_sym", keyword="==")
+                return ExecutionError("error.name.syntax_error", "error.msg.expected_sym", string="==")
             self.advance()
             value = self.parse_expr()
             if self.is_error(value):
