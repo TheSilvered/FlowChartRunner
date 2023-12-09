@@ -70,8 +70,9 @@ class TextBox:
     @text.setter
     def text(self, new_value):
         if self._text != new_value:
-            self.on_update(new_value, *self.on_update_args)
-        self._text = new_value
+            self._text = new_value
+            if self.on_update is not None:
+                self.on_update(self, *self.on_update_args)
 
     def set_text(self, text):
         self.text = text
@@ -234,7 +235,8 @@ class TextBox:
         return final_pos
 
     def send(self):
-        self.on_send(self.text, *self.on_send_args)
+        if self.on_send is not None:
+            self.on_send(self, *self.on_send_args)
         self.focused = False
 
     def handle_event(self, event: pg.event.Event) -> bool:

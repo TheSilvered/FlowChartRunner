@@ -3,9 +3,11 @@ import pygame as pg
 from runner import Runner, RunnerError
 from text_rendering import line_height
 from ui_components import (
-    InfoBar, draw_arrows, StartBlock, EndBlock, BlockBase, IOBlock, CondBlock, InitBlock, CalcBlock, BlockState
+    InfoBar, draw_arrows, StartBlock, EndBlock, BlockBase, IOBlock, CondBlock, InitBlock, CalcBlock, BlockState,
+    TextBox
 )
 from ui_components.blocks import Pos, _OptionBlock
+from ui_components.constants import TEXTBOX_PADDING
 
 from .constants import GUIDELINE_COLOR, AXIS_COLOR, EDITOR_BG_COLOR, SELECTION_BORDER_COLOR
 
@@ -34,6 +36,12 @@ class Editor:
         self.global_offset = [0, 0]
         self.info_bar: InfoBar | None = None
 
+        self.input_textbox = TextBox(
+            rect=pg.Rect(10, 10, 300, line_height() + TEXTBOX_PADDING * 2),
+            on_send=self.__send_input,
+            single_line=True
+        )
+
     @property
     def pending_next_block(self):
         return self._pending_next_block
@@ -42,6 +50,12 @@ class Editor:
     def pending_next_block(self, value):
         self._pending_next_block = value
         self.fake_pending_next_block = value
+
+    def __send_input(self, textbox):
+        if self.runner is not None and textbox.text:
+            self.runner.in_q.put(textbox.text)
+        textbox.text = ""
+        textbox.placeholder_text = ""
 
     def intersect_point(self, point) -> BlockBase | None:
         point = list(Pos(*point) - self.global_offset)
@@ -92,6 +106,10 @@ class Editor:
         elif event.button != pg.BUTTON_LEFT:
             return
 
+        if self.input_textbox.rect.collidepoint(event.pos) and self.runner is not None:
+            self.input_textbox.focused = True
+            return
+
         block = self.intersect_point(event.pos)
         if block is not None:
             if self.pending_next_block is not None:
@@ -140,6 +158,13 @@ class Editor:
             self.update_select_area()
 
     def handle_event(self, event: pg.event.Event):
+        if self.input_textbox.focused and self.input_textbox.handle_event(event):
+            return
+
+        if event.type == pg.QUIT and self.runner is not None:
+            self.runner.stop()
+            self.runner = None
+
         if self.info_bar is not None and self.info_bar.handle_event(event):
             self.pending_next_block = None
             return
@@ -196,13 +221,22 @@ class Editor:
                     self.pending_next_block = None
             elif event.key == pg.K_r:
                 self.start_execution()
+            elif event.key == pg.K_s:
+                if self.runner is not None:
+                    self.runner.stop()
+                    self.runner = None
+            elif event.key == pg.K_p:
+                if self.runner is not None and self.runner.is_paused:
+                    self.runner.resume()
+                elif self.runner is not None:
+                    self.runner.pause()
 
     def start_execution(self):
         self.selected_blocks = []
         self.pending_next_block = None
         self.selecting = False
         try:
-            self.runner = Runner(self.start_block, 0.5)
+            self.runner = Runner(self.start_block)
         except RunnerError as e:
             print(e.exe_err.format(self.langauge))
             return
@@ -258,6 +292,11 @@ class Editor:
             self.runner.update_state()
             for message in self.runner.get_queued_messages():
                 print(message)
+            for error in self.runner.get_queued_errors():
+                print(error.format(self.langauge))
+            placeholder = self.runner.get_placeholder_text()
+            if placeholder is not None:
+                self.input_textbox.placeholder_text = placeholder
             if not self.runner.is_running():
                 self.runner = None
 
@@ -275,5 +314,11 @@ class Editor:
         if self.info_bar is not None and self.runner is None:
             self.info_bar.draw(screen)
 
-        if self.selecting:
+        if self.runner is not None:
+            self.input_textbox.draw(screen)
+        else:
+            self.input_textbox.focused = False
+            self.input_textbox.text = ""
+
+        if self.selecting and self.runner is not None:
             pg.draw.rect(screen, SELECTION_BORDER_COLOR, self.select_area, 1)

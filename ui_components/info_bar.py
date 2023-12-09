@@ -74,8 +74,8 @@ class InfoBar:
                 selector.link_selector(link)
 
     @staticmethod
-    def __update_block_text(text, block):
-        block.content = text
+    def __update_block_text(textbox, block):
+        block.content = textbox.text
 
     def handle_event(self, event: pg.event.Event) -> bool:
         if event.type == pg.MOUSEBUTTONDOWN \

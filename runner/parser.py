@@ -86,7 +86,7 @@ class Parser:
             return value
         if not self.finished:
             return ExecutionError("error.name.syntax_error", "error.msg.unexpected_token", tok_type=self.tok.type.name)
-        return WriteNode(value)
+        return value
 
     def parse_init_block(self) -> Node | ExecutionError:
         nodes = []

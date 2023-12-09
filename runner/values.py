@@ -166,6 +166,9 @@ def pow_val(left: ExeValue, right: ExeValue) -> ExeValue:
         result = left.value ** right.value
         if isinstance(result, complex):
             return ExeError("error.name.math_error", "error.msg.negative_root")
+        return ExeNumber(result)
+    else:
+        return _type_error(left, right, "^")
 
 
 def eq_val(left: ExeValue, right: ExeValue) -> ExeValue:

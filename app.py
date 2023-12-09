@@ -21,11 +21,10 @@ class App:
 
     def handle_events(self):
         for event in pg.event.get():
+            self.editor.handle_event(event)
             if event.type == pg.QUIT:
                 self.running = False
                 break
-            else:
-                self.editor.handle_event(event)
 
     def run(self):
         while self.running:

@@ -105,12 +105,12 @@ class Runner:
             ast, next_block = ast_map[curr_block_id]
             value = ast.evaluate(sym_table, io_link)
             if value.error():
-                err_q.put_nowait((value.value.name, value.value.msg))
+                err_q.put_nowait((value.value.name, value.value.msg, value.value.fmt_args))
                 error_occurred.value = True
                 error_occurred_v = True
                 break
 
-            for key, value in sym_table:
+            for key, value in sym_table.items():
                 sym_table_vars.put_nowait((key, value.value))
 
             sym_table_vars.put_nowait(None)
@@ -131,7 +131,7 @@ class Runner:
                 curr_block_id = next_block[0]
             else:
                 curr_block_id = next_block[1]
-            current_block.value = next_block
+            current_block.value = curr_block_id
 
         if error_occurred_v:
             while True:
@@ -162,7 +162,7 @@ class Runner:
             return
 
         self._delay_value = mp.Value(ctypes.c_double, self._delay)
-        self._current_block = mp.Value(ctypes.c_void_p)
+        self._current_block = mp.Value(ctypes.c_longlong, 0)
         self._is_paused = mp.Value(ctypes.c_bool, False)
         self._error_occurred = mp.Value(ctypes.c_bool, False)
         self.in_q = mp.Queue()
@@ -245,3 +245,25 @@ class Runner:
         except queue.Empty:
             pass
         return messages
+
+    def get_queued_errors(self):
+        errors = []
+        try:
+            for _ in range(50):
+                err_name, err_msg, fmt_args = self.err_q.get_nowait()
+                errors.append(ExecutionError(err_name, err_msg, **fmt_args))
+        except queue.Empty:
+            pass
+        return errors
+
+    def get_placeholder_text(self):
+        if not self.is_running():
+            return None
+
+        placeholder = None
+        try:
+            for _ in range(50):
+                _, placeholder = self.link_out_msg.get_nowait()
+        except queue.Empty:
+            pass
+        return placeholder
