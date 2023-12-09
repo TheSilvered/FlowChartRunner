@@ -4,6 +4,7 @@ from .constants import (
     ARROW_POINT_SELECTOR_RECT_W, ARROW_POINT_SELECTOR_RECT_H, ARROW_POINT_SELECTOR_RECT_COLOR,
     ARROW_POINT_SELECTOR_PADDING
 )
+from draw_utils import draw_rect
 
 
 class ArrowDirection:
@@ -71,14 +72,18 @@ class ArrowPointSelector:
         arrow_image = self.__get_image(direction)
 
         if direction == ArrowDirection.TOP:
-            pos = (self.rect.centerx - arrow_image.get_width() // 2, self.rect.top)
+            pos = (self.rect.centerx - arrow_image.get_width()//2 - 10, self.rect.top - 1)
+            extra_size = (20, 2)
         elif direction == ArrowDirection.LEFT:
-            pos = (self.rect.left, self.rect.centery - arrow_image.get_height() // 2)
+            pos = (self.rect.left - 1, self.rect.centery - arrow_image.get_height()//2 - 10)
+            extra_size = (2, 20)
         elif direction == ArrowDirection.BOTTOM:
-            pos = (self.rect.centerx - arrow_image.get_width() // 2, self.rect.bottom - arrow_image.get_height())
+            pos = (self.rect.centerx - arrow_image.get_width()//2 - 10, self.rect.bottom - arrow_image.get_height() - 1)
+            extra_size = (20, 2)
         else:
-            pos = (self.rect.right - arrow_image.get_width(), self.rect.centery - arrow_image.get_height() // 2)
-        return pg.Rect(pos, arrow_image.get_size())
+            pos = (self.rect.right - arrow_image.get_width() - 1, self.rect.centery - arrow_image.get_height()//2 - 10)
+            extra_size = (2, 20)
+        return pg.Rect(pos, (arrow_image.get_width() + extra_size[0], arrow_image.get_height() + extra_size[1]))
 
     def handle_event(self, event):
         if event.type != pg.MOUSEBUTTONDOWN:
@@ -107,16 +112,18 @@ class ArrowPointSelector:
     def draw(self, screen):
         arrow_image = self.__get_image(ArrowDirection.TOP)
 
-        pg.draw.rect(
+        draw_rect(
             screen,
-            ARROW_POINT_SELECTOR_RECT_COLOR,
             pg.Rect(
                 self.rect.x + arrow_image.get_height() + ARROW_POINT_SELECTOR_PADDING,
                 self.rect.y + arrow_image.get_width() + ARROW_POINT_SELECTOR_PADDING,
                 ARROW_POINT_SELECTOR_RECT_W,
                 ARROW_POINT_SELECTOR_RECT_H
             ),
-            2
+            ARROW_POINT_SELECTOR_RECT_COLOR[:3] + (0,),
+            2,
+            2,
+            ARROW_POINT_SELECTOR_RECT_COLOR
         )
 
         pos = (self.rect.centerx - arrow_image.get_width() // 2, self.rect.top)

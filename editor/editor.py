@@ -8,15 +8,15 @@ import pygame as pg
 
 class Editor:
     def __init__(self, language):
-        start_block = StartBlock(language.StartBlock.content)
-        end_block = EndBlock(start_block, language.EndBlock.content)
+        self.start_block = StartBlock(language.StartBlock.content)
+        end_block = EndBlock(self.start_block, language.EndBlock.content)
         self.langauge = language
 
-        start_block.pos = [0, 0]
-        end_block_x = (start_block.get_size()[0] - end_block.get_size()[0]) / 2 + start_block.pos[0]
-        end_block.pos = [end_block_x, start_block.get_size()[1] + line_height() * 3]
+        self.start_block.pos = [0, 0]
+        end_block_x = (self.start_block.get_size()[0] - end_block.get_size()[0]) / 2 + self.start_block.pos[0]
+        end_block.pos = [end_block_x, self.start_block.get_size()[1] + line_height() * 3]
 
-        self.blocks: list[BlockBase] = [start_block, end_block]
+        self.blocks: list[BlockBase] = [self.start_block, end_block]
         self.dragging_blocks: list[BlockBase] | None = None
         self.has_moved = False
         self.dragging_global = False
@@ -78,6 +78,25 @@ class Editor:
             abs(self.select_start[0] - mp[0]),
             abs(self.select_start[1] - mp[1])
         )
+
+    def __check_block_tree(self):
+        blocks_checked = []
+        blocks_to_check = [self.start_block]
+        for block in blocks_to_check:
+            if isinstance(block, EndBlock) or block in blocks_checked:
+                continue
+            if isinstance(block, CondBlock):
+                if block.on_true.next_block is None or block.on_false.next_block is None:
+                    return False
+                blocks_checked.append(block)
+                blocks_to_check.append(block.on_true.next_block)
+                blocks_to_check.append(block.on_false.next_block)
+            else:
+                if block.next_block is None:
+                    return False
+                blocks_checked.append(block)
+                blocks_to_check.append(block.next_block)
+        return True
 
     def __handle_mouse_button_down_event(self, event):
         if event.button == pg.BUTTON_RIGHT:
@@ -189,6 +208,8 @@ class Editor:
                 elif self.pending_next_block is not None:
                     self.pending_next_block.next_block = None
                     self.pending_next_block = None
+            elif event.key == pg.K_r:
+                print(self.__check_block_tree())
 
     def delete_block(self, block):
         # These blocks cannot be deleted

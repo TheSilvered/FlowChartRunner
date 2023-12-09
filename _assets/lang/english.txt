@@ -50,4 +50,4 @@ error.msg.unexpected_token=unexpected token '{tok_type}'
 error.msg.expected_sym=expected '{string}'
 error.msg.expected_value=expected a value
 error.msg.var_not_defined=variable '{var_name}' is not defined
-error.msg.var_not_defined=variable '{var_name}' is already defined
+error.msg.var_already_defined=variable '{var_name}' is already defined
