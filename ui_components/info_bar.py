@@ -1,11 +1,12 @@
 from .blocks import *
 from .constants import (
-    PROPERTY_VALUE_COL_WIDTH, INFO_BAR_WIDTH, PROPERTY_H_PADDING, PROPERTY_V_PADDING, PROPERTY_TEXTBOX_PADDING,
-    INFO_BG_DARK, INFO_BG_LIGHT, PROPERTY_BORDER_COLOR, INFO_BAR_ARROW_SELECTOR_PADDING, TEXTBOX_MIN_HEIGHT
+    PROPERTY_NAME_COL_WIDTH, PROPERTY_VALUE_COL_WIDTH, INFO_BAR_WIDTH, PROPERTY_TEXTBOX_PADDING, PROPERTY_BORDER_COLOR,
+    INFO_BAR_BG, INFO_BAR_ARROW_SELECTOR_PADDING, TEXTBOX_MIN_HEIGHT
 )
 from .textbox import TextBox
 from .arrow_point_selector import ArrowPointSelector
 from language_manager import Language
+from .table import Table
 
 
 class InfoBar:
@@ -29,18 +30,27 @@ class InfoBar:
 
         self.__link_selectors()
 
-        self._properties = [(), (), ()]
+        if isinstance(block, IOBlock):
+            self.table = Table(
+                (0, 0),
+                [line_height()] * 4, [PROPERTY_NAME_COL_WIDTH, PROPERTY_VALUE_COL_WIDTH]
+            )
+        else:
+            self.table = Table((0, 0), [line_height()] * 3, [PROPERTY_NAME_COL_WIDTH, PROPERTY_VALUE_COL_WIDTH])
+
+        self.table[0, 0] = self.language.info.type.name
+        self.table[1, 0] = self.language.info.position.name
+        self.table[2, 0] = self.language.info.size.name
 
         if isinstance(block, IOBlock):
-            self._properties.append(())
+            self.table[3, 0] = self.language.info.input.name
 
         if block.editable:
             self.tb_content: TextBox | None = TextBox(
-                pg.Rect(
-                    0, 0,
-                    INFO_BAR_WIDTH - PROPERTY_TEXTBOX_PADDING * 2, TEXTBOX_MIN_HEIGHT
-                ),
-                self.language.info.content_textbox.placeholder
+                pg.Rect(0, 0, INFO_BAR_WIDTH - PROPERTY_TEXTBOX_PADDING * 2, TEXTBOX_MIN_HEIGHT),
+                self.language.info.content_textbox.placeholder,
+                on_update=self.__update_block_text,
+                on_update_args=(self.block,)
             )
             self.tb_content.set_text(block.content)
         else:
@@ -63,6 +73,10 @@ class InfoBar:
                     continue
                 selector.link_selector(link)
 
+    @staticmethod
+    def __update_block_text(text, block):
+        block.content = text
+
     def handle_event(self, event: pg.event.Event) -> bool:
         if event.type == pg.MOUSEBUTTONDOWN \
            and event.button == pg.BUTTON_LEFT \
@@ -71,12 +85,12 @@ class InfoBar:
             if self.tb_content.rect.collidepoint(event.pos):
                 self.tb_content.focused = True
                 return True
-        elif event.type == pg.MOUSEBUTTONUP and self.tb_content is not None and self.tb_content.focused:
-            if not self.tb_content.rect.collidepoint(event.pos):
-                self.tb_content.focused = False
 
-        if self.tb_content is not None and self.tb_content.focused and self.tb_content.handle_event(event):
-            return True
+        if self.tb_content is not None and self.tb_content.focused:
+            if self.tb_content.handle_event(event):
+                return True
+            elif event.type == pg.MOUSEBUTTONUP:
+                self.tb_content.focused = False
 
         if self.arrows_in_selector is not None and self.arrows_in_selector.handle_event(event):
             return True
@@ -95,7 +109,7 @@ class InfoBar:
         return False
 
     def __get_ui_height(self):
-        height = self.__property_table_height() + self.__arrow_point_selector_height()
+        height = self.table.rect.h + self.__arrow_point_selector_height()
         height += TEXTBOX_MIN_HEIGHT + PROPERTY_TEXTBOX_PADDING if self.tb_content is not None else 0
         return height
 
@@ -116,7 +130,7 @@ class InfoBar:
 
         rect_x = screen_w - INFO_BAR_WIDTH
         screen_h = screen_h
-        pg.draw.rect(screen, INFO_BG_DARK, pg.Rect(rect_x, 0, INFO_BAR_WIDTH, screen_h))
+        pg.draw.rect(screen, INFO_BAR_BG, pg.Rect(rect_x, 0, INFO_BAR_WIDTH, screen_h))
 
         if self.y_offset > 0:
             self.y_offset = 0
@@ -125,9 +139,13 @@ class InfoBar:
         elif self.__get_ui_height() < screen_h:
             self.y_offset = 0
 
-        current_y = self.y_offset
-        current_y = self.__draw_properties(screen, current_y)
-        current_y = self.__draw_point_selectors(screen, current_y)
+        self.table.rect.x = screen_w - INFO_BAR_WIDTH
+        self.table.rect.y = self.y_offset
+        self.__update_table_values()
+        self.table.draw(screen)
+        pg.draw.line(screen, PROPERTY_BORDER_COLOR, self.table.rect.bottomleft, self.table.rect.bottomright, 2)
+        current_y = self.__draw_point_selectors(screen, self.table.rect.bottom)
+        current_y += PROPERTY_TEXTBOX_PADDING
 
         if self.tb_content is not None:
             new_height = screen_h - current_y - PROPERTY_TEXTBOX_PADDING
@@ -136,9 +154,6 @@ class InfoBar:
             self.tb_content.rect.right = screen_w - PROPERTY_TEXTBOX_PADDING
             self.tb_content.rect.top = current_y
             self.tb_content.draw(screen)
-
-        # pg.draw.line(screen, (255, 0, 255), (screen_w - INFO_BAR_WIDTH, self.__get_ui_height()),
-        # (screen_w, self.__get_ui_height()))
 
         pg.draw.line(screen, PROPERTY_BORDER_COLOR, (rect_x - 2, 0), (rect_x - 2, screen_h), 2)
 
@@ -246,66 +261,19 @@ class InfoBar:
 
         return current_y
 
-    @staticmethod
-    def __property_line_height():
-        return line_height() + PROPERTY_V_PADDING * 2
-
-    def __property_table_height(self):
-        return self.__property_line_height() * len(self._properties)
-
     def __block_name(self):
         return self.language[self.block.__class__.__name__].name
 
-    def __draw_properties(self, screen, current_y):
-        screen_w = screen.get_width()
-        screen_h = screen.get_height()
-        property_name_col = pg.Rect(
-            screen_w - INFO_BAR_WIDTH, 0,
-            INFO_BAR_WIDTH - PROPERTY_VALUE_COL_WIDTH, screen_h)
-        property_value_col = pg.Rect(
-            screen_w - PROPERTY_VALUE_COL_WIDTH, 0,
-            PROPERTY_VALUE_COL_WIDTH, screen_h)
-        lh = line_height() + PROPERTY_V_PADDING * 2
-
-        self._properties = [
-            (
-                self.language.info.type.name,
-                self.language.info.type.value.format(name=self.__block_name())
-            ), (
-                self.language.info.position.name,
-                self.language.info.position.value.format(x=self.block.pos.x, y=self.block.pos.y)
-            ), (
-                self.language.info.size.name,
-                self.language.info.size.value.format(w=self.block.get_size()[0], h=self.block.get_size()[1])
-            )
-        ]
+    def __update_table_values(self):
+        self.table[0, 1] = self.language.info.type.value.format(name=self.__block_name())
+        self.table[1, 1] = self.language.info.position.value.format(x=self.block.pos.x, y=self.block.pos.y)
+        self.table[2, 1] = self.language.info.size.value.format(
+            w=self.block.get_size()[0],
+            h=self.block.get_size()[1]
+        )
 
         if isinstance(self.block, IOBlock):
-            self._properties.append((
-                self.language.info.input.name,
-                self.language.info.input.value_true if self.block.is_input else self.language.info.input.value_false
-            ))
-
-        for i, (p_name, p_val) in enumerate(self._properties):
-            line_rect = pg.Rect(property_name_col.x, lh * i + current_y, property_name_col.w + property_value_col.w, lh)
-            if i % 2 == 0:
-                pg.draw.rect(screen, INFO_BG_LIGHT, line_rect)
+            if self.block.is_input:
+                self.table[3, 1] = self.language.info.input.value_true
             else:
-                pg.draw.rect(screen, INFO_BG_DARK, line_rect)
-
-            p_name_surf = write_text(p_name)
-            p_val_surf = write_text(p_val)
-            p_name_rect = pg.Rect(0, 0, property_name_col.w, lh)
-            p_val_rect = pg.Rect(0, 0, property_value_col.w, lh)
-            screen.blit(
-                p_name_surf,
-                (property_name_col.x + PROPERTY_H_PADDING, lh * i + PROPERTY_V_PADDING + current_y),
-                p_name_rect
-            )
-            screen.blit(
-                p_val_surf,
-                (property_value_col.x + PROPERTY_H_PADDING, lh * i + PROPERTY_V_PADDING + current_y),
-                p_val_rect
-            )
-
-        return current_y + lh * len(self._properties) + PROPERTY_V_PADDING
+                self.table[3, 1] = self.language.info.input.value_false

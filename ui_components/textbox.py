@@ -7,14 +7,22 @@ from .constants import (
     TEXTBOX_SELECTEC_BORDER_COLOR
 )
 from text_rendering.constants import HC_STRS
+from typing import Callable
 
 movement_keys = pg.K_UP, pg.K_DOWN, pg.K_LEFT, pg.K_RIGHT, pg.K_HOME, pg.K_END
 control_keys = pg.K_LCTRL, pg.K_RCTRL, pg.K_LSHIFT, pg.K_RSHIFT, pg.K_LALT, pg.K_RALT
 
 
 class TextBox:
-    def __init__(self, rect: pg.Rect, placeholder_text: str = ""):
-        self.text = ""
+    def __init__(
+            self,
+            rect: pg.Rect,
+            placeholder_text: str = "",
+            on_update: Callable = None, on_update_args: tuple = (),
+            on_send: Callable = None, on_send_args: tuple = (),
+            single_line: bool = False
+    ):
+        self._text = ""
         self._caret_pos = 0
         self.rect: pg.Rect = rect
         self._focused: bool = False
@@ -23,6 +31,11 @@ class TextBox:
         self.selection_start = None
         self.selecting_with_mouse = False
         self.placeholder_text = placeholder_text
+        self.on_update = on_update
+        self.on_update_args = on_update_args
+        self.on_send = on_send
+        self.on_send_args = on_send_args
+        self.__single_line = single_line
 
     @property
     def focused(self):
@@ -49,6 +62,16 @@ class TextBox:
         if self._caret_pos != value:
             self.blink_start = time.perf_counter()
         self._caret_pos = value
+
+    @property
+    def text(self):
+        return self._text
+
+    @text.setter
+    def text(self, new_value):
+        if self._text != new_value:
+            self.on_update(new_value, *self.on_update_args)
+        self._text = new_value
 
     def set_text(self, text):
         self.text = text
@@ -210,6 +233,10 @@ class TextBox:
         self.caret_pos = orig_caret_pos
         return final_pos
 
+    def send(self):
+        self.on_send(self.text, *self.on_send_args)
+        self.focused = False
+
     def handle_event(self, event: pg.event.Event) -> bool:
         if event.type == pg.MOUSEBUTTONDOWN and event.button == pg.BUTTON_LEFT:
             if not self.rect.collidepoint(event.pos):
@@ -221,8 +248,10 @@ class TextBox:
         elif event.type == pg.MOUSEBUTTONUP and event.button == pg.BUTTON_LEFT:
             if self.caret_pos == self.selection_start and self.selecting_with_mouse:
                 self.selection_start = None
-            self.selecting_with_mouse = False
-            return True
+            if self.selecting_with_mouse:
+                self.selecting_with_mouse = False
+                return True
+            return self.rect.collidepoint(event.pos)
         elif event.type == pg.MOUSEMOTION and self.selecting_with_mouse:
             if self.selecting_with_mouse:
                 self.caret_pos = self.__get_caret_pos_from_coordinates(event.pos)
@@ -294,6 +323,9 @@ class TextBox:
                 self.selection_start = None
             else:
                 self.focused = False
+        elif event.key == pg.K_RETURN:
+            self.send()
+            return True
         elif event.key not in control_keys:
             self.insert_text(event.unicode)
 

@@ -23,6 +23,7 @@ class Editor:
         self.selecting = False
         self._pending_next_block = None
         self.fake_pending_next_block = None
+        self.executing = False
         self.select_start = (0, 0)
         self.select_area = pg.Rect(-1, -1, 0, 0)
         self.selected_blocks: list[BlockBase] = []
@@ -78,25 +79,6 @@ class Editor:
             abs(self.select_start[0] - mp[0]),
             abs(self.select_start[1] - mp[1])
         )
-
-    def __check_block_tree(self):
-        blocks_checked = []
-        blocks_to_check = [self.start_block]
-        for block in blocks_to_check:
-            if isinstance(block, EndBlock) or block in blocks_checked:
-                continue
-            if isinstance(block, CondBlock):
-                if block.on_true.next_block is None or block.on_false.next_block is None:
-                    return False
-                blocks_checked.append(block)
-                blocks_to_check.append(block.on_true.next_block)
-                blocks_to_check.append(block.on_false.next_block)
-            else:
-                if block.next_block is None:
-                    return False
-                blocks_checked.append(block)
-                blocks_to_check.append(block.next_block)
-        return True
 
     def __handle_mouse_button_down_event(self, event):
         if event.button == pg.BUTTON_RIGHT:
@@ -209,7 +191,7 @@ class Editor:
                     self.pending_next_block.next_block = None
                     self.pending_next_block = None
             elif event.key == pg.K_r:
-                print(self.__check_block_tree())
+                pass
 
     def delete_block(self, block):
         # These blocks cannot be deleted
