@@ -1,9 +1,13 @@
-from ui_components import StartBlock, EndBlock, BlockBase, IOBlock, CondBlock, InitBlock, CalcBlock, BlockState
-from ui_components.blocks import Pos, _OptionBlock
-from .constants import GUIDELINE_COLOR, AXIS_COLOR, EDITOR_BG_COLOR, SELECTION_BORDER_COLOR
-from text_rendering import line_height
-from ui_components import InfoBar, draw_arrows
 import pygame as pg
+
+from runner import Runner, RunnerError
+from text_rendering import line_height
+from ui_components import (
+    InfoBar, draw_arrows, StartBlock, EndBlock, BlockBase, IOBlock, CondBlock, InitBlock, CalcBlock, BlockState
+)
+from ui_components.blocks import Pos, _OptionBlock
+
+from .constants import GUIDELINE_COLOR, AXIS_COLOR, EDITOR_BG_COLOR, SELECTION_BORDER_COLOR
 
 
 class Editor:
@@ -23,7 +27,7 @@ class Editor:
         self.selecting = False
         self._pending_next_block = None
         self.fake_pending_next_block = None
-        self.executing = False
+        self.runner: Runner | None = None
         self.select_start = (0, 0)
         self.select_area = pg.Rect(-1, -1, 0, 0)
         self.selected_blocks: list[BlockBase] = []
@@ -191,7 +195,18 @@ class Editor:
                     self.pending_next_block.next_block = None
                     self.pending_next_block = None
             elif event.key == pg.K_r:
-                pass
+                self.start_execution()
+
+    def start_execution(self):
+        self.selected_blocks = []
+        self.pending_next_block = None
+        self.selecting = False
+        try:
+            self.runner = Runner(self.start_block, 0.5)
+        except RunnerError as e:
+            print(e.exe_err.format(self.langauge))
+            return
+        self.runner.start()
 
     def delete_block(self, block):
         # These blocks cannot be deleted
@@ -239,15 +254,25 @@ class Editor:
         self.__draw_background_grid(screen)
         draw_arrows(screen, self.blocks, self.global_offset)
 
+        if self.runner is not None:
+            self.runner.update_state()
+            for message in self.runner.get_queued_messages():
+                print(message)
+            if not self.runner.is_running():
+                self.runner = None
+
         for block in self.blocks:
             state = BlockState.IDLE
-            if block in self.selected_blocks:
+            if self.runner is not None:
+                if self.runner.current_block == id(block):
+                    state = BlockState.ERROR if self.runner.error_occurred else BlockState.RUNNING
+            elif block in self.selected_blocks:
                 state = BlockState.SELECTED
             elif block is self.fake_pending_next_block:
                 state = BlockState.PENDING_NEXT_BLOCK
             block.draw(screen, state, self.global_offset)
 
-        if self.info_bar is not None:
+        if self.info_bar is not None and self.runner is None:
             self.info_bar.draw(screen)
 
         if self.selecting:

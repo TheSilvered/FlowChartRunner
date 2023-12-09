@@ -51,3 +51,4 @@ error.msg.expected_sym=atteso '{string}'
 error.msg.expected_value=atteso un valore
 error.msg.var_not_defined=la variabile '{var_name}' non è definita
 error.msg.var_already_defined=la variabile '{var_name}' è già definita
+error.msg.incomplete_tree=non tutti i blocchi eseguibili sono collegati

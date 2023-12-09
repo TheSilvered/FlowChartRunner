@@ -33,8 +33,8 @@ class Runner:
         self._current_block = None
         self._is_paused = None
         self._error_occurred = None
-        self.out_q = None
-        self.err_q = None
+        self.out_q = mp.Queue()
+        self.err_q = mp.Queue()
         self.in_q = None
         self.link_in_msg = None
         self.link_out_msg = None
@@ -48,9 +48,9 @@ class Runner:
             if isinstance(ast, ExecutionError):
                 raise RunnerError(ast)
             if isinstance(block, CondBlock):
-                self.ast_map[id(block)] = (ast, (block.on_true.next_block, block.on_false.next_block))
+                self.ast_map[id(block)] = (ast, (id(block.on_true.next_block), id(block.on_false.next_block)))
             else:
-                self.ast_map[id(block)] = (ast, block.next_block)
+                self.ast_map[id(block)] = (ast, id(block.next_block))
 
     @property
     def delay(self):
@@ -73,6 +73,12 @@ class Runner:
         if self._error_occurred is None:
             return False
         return self._error_occurred.value
+
+    @property
+    def current_block(self):
+        if self._current_block is None:
+            return -1
+        return self._current_block.value
 
     @staticmethod
     def execute_blocks(
@@ -145,7 +151,7 @@ class Runner:
                 blocks_to_check.append(block.on_false.next_block)
             else:
                 if block.next_block is None:
-                    RunnerError("error.name.comp_error", "error.msg.incomplete_tree")
+                    raise RunnerError("error.name.comp_error", "error.msg.incomplete_tree")
                 blocks_checked.append(block)
                 blocks_to_check.append(block.next_block)
         blocks_checked = [b for b in blocks_checked if not isinstance(b, EndBlock) and not isinstance(b, StartBlock)]
@@ -155,12 +161,10 @@ class Runner:
         if self._process is not None:
             return
 
-        self._delay_value = mp.Value(ctypes.c_double(self._delay))
-        self._current_block = mp.Value(ctypes.c_void_p())
-        self._is_paused = mp.Value(ctypes.c_bool(False))
-        self._error_occurred = mp.Value(ctypes.c_bool(False))
-        self.out_q = mp.Queue()
-        self.err_q = mp.Queue()
+        self._delay_value = mp.Value(ctypes.c_double, self._delay)
+        self._current_block = mp.Value(ctypes.c_void_p)
+        self._is_paused = mp.Value(ctypes.c_bool, False)
+        self._error_occurred = mp.Value(ctypes.c_bool, False)
         self.in_q = mp.Queue()
         self.link_in_msg = mp.Queue()
         self.link_out_msg = mp.Queue()
@@ -185,6 +189,8 @@ class Runner:
             )
         )
 
+        self._process.start()
+
     def stop(self):
         if self._process.is_alive():
             self._process.terminate()
@@ -192,8 +198,6 @@ class Runner:
         self._delay_value = None
         self._current_block = None
         self._is_paused = None
-        self.out_q = None
-        self.err_q = None
         self.in_q = None
         self.link_in_msg = None
         self.link_out_msg = None
@@ -230,3 +234,14 @@ class Runner:
         if not self.is_paused:
             return
         self._is_paused.value = False
+
+    def get_queued_messages(self):
+        messages = []
+        try:
+            # get at most 50 messages per frame
+            for _ in range(50):
+                value = self.out_q.get_nowait()
+                messages.append(value)
+        except queue.Empty:
+            pass
+        return messages
