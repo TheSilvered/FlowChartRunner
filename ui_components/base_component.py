@@ -40,7 +40,7 @@ class Pos:
         try:
             return Pos(self.x * other[0], self.y * other[1])
         except Exception:
-            raise NotImplemented
+            return NotImplemented
 
     def __imul__(self, other):
         return self.__mul__(other)
@@ -51,7 +51,7 @@ class Pos:
         except ZeroDivisionError as e:
             raise e
         except Exception:
-            raise NotImplemented
+            return NotImplemented
 
     def __getitem__(self, item):
         if item == 0:
@@ -82,6 +82,7 @@ class UIBaseComponent(ABC):
         for constraint in self._constraints:
             constraint.apply(self)
         self._draw(screen, *args, **kwargs)
+        # pg.draw.rect(screen, (255, 0, 255), self.rect)
 
     @abstractmethod
     def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:
@@ -177,7 +178,6 @@ class UIBaseComponent(ABC):
 
 class DummyComponent(UIBaseComponent):
     def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:
-        # pg.draw.rect(screen, (255, 0, 255), self.rect, 1)
         pass
 
     def handle_event(self, event: pg.event.Event) -> bool:
