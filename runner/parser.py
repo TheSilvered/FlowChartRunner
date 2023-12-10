@@ -6,7 +6,7 @@ from ui_components import IOBlock, CondBlock, InitBlock, CalcBlock, BlockBase
 
 
 def full_compilation(block: BlockBase) -> Node | ExecutionError:
-    lexer = Lexer(block.content)
+    lexer = Lexer(block.content.text)
     tokens = lexer.tokenize()
     if isinstance(tokens, ExecutionError):
         return tokens
@@ -97,7 +97,7 @@ class Parser:
             ident = self.tok.value
             self.advance()
             if self.tok != TokenType.EQUALS:
-                return ExecutionError("error.name.syntax_error", "error.msg.expected_sym", string="==")
+                return ExecutionError("error.name.syntax_error", "error.msg.expected_sym", string="=")
             self.advance()
             value = self.parse_expr()
             if self.is_error(value):
@@ -119,7 +119,7 @@ class Parser:
             ident = self.tok.value
             self.advance()
             if self.tok != TokenType.EQUALS:
-                return ExecutionError("error.name.syntax_error", "error.msg.expected_sym", string="==")
+                return ExecutionError("error.name.syntax_error", "error.msg.expected_sym", string="=")
             self.advance()
             value = self.parse_expr()
             if self.is_error(value):

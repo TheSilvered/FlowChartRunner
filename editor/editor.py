@@ -309,7 +309,10 @@ class Editor:
                 state = BlockState.SELECTED
             elif block is self.fake_pending_next_block:
                 state = BlockState.PENDING_NEXT_BLOCK
-            block.draw(screen, state, self.global_offset)
+            block.state = state
+            block.pos += self.global_offset
+            block.draw(screen)
+            block.pos -= self.global_offset
 
         if self.info_bar is not None and self.runner is None:
             self.info_bar.draw(screen)
@@ -320,5 +323,5 @@ class Editor:
             self.input_textbox.focused = False
             self.input_textbox.text = ""
 
-        if self.selecting and self.runner is not None:
+        if self.selecting and self.runner is None:
             pg.draw.rect(screen, SELECTION_BORDER_COLOR, self.select_area, 1)

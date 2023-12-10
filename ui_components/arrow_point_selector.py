@@ -5,6 +5,7 @@ from .constants import (
     ARROW_POINT_SELECTOR_PADDING, ARROW_POINT_ACTIVE_COLOR, ARROW_POINT_SELECTED_COLOR, ARROW_POINT_DISABLED_COLOR
 )
 from draw_utils import draw_rect
+from .base_component import UIBaseComponent
 
 
 class ArrowDirection:
@@ -14,7 +15,7 @@ class ArrowDirection:
     RIGHT = "right"
 
 
-class ArrowPointSelector:
+class ArrowPointSelector(UIBaseComponent):
     def __init__(self, direction: ArrowDirection, inward: bool):
         self.direction = direction
         self.inward = inward
@@ -22,25 +23,13 @@ class ArrowPointSelector:
 
         self.links: list[ArrowPointSelector] = []
 
-        self.rect = pg.Rect(
+        super().__init__(pg.Rect(
             0, 0,
             # get_height because image is rotated
             arrow_image.get_height() * 2 + ARROW_POINT_SELECTOR_RECT_W + ARROW_POINT_SELECTOR_PADDING * 2,
             # get_width  because image is rotated
             arrow_image.get_width() * 2 + ARROW_POINT_SELECTOR_RECT_H + ARROW_POINT_SELECTOR_PADDING * 2
-        )
-
-    @property
-    def pos(self):
-        return self.rect.topleft
-
-    @pos.setter
-    def pos(self, pos):
-        self.rect.topleft = pos
-
-    @property
-    def size(self):
-        return self.rect.size
+        ))
 
     def link_selector(self, selector):
         self.links.append(selector)
@@ -109,7 +98,7 @@ class ArrowPointSelector:
             return True
         return False
 
-    def draw(self, screen):
+    def _draw(self, screen, *args, **kwargs):
         arrow_image = self.__get_image(ArrowDirection.TOP)
 
         draw_rect(

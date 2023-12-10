@@ -75,5 +75,5 @@ class TextLabel(UIBaseComponent):
     def handle_event(self, event: pg.event.Event) -> bool:
         return False
 
-    def draw(self, screen: pg.Surface) -> None:
+    def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:
         screen.blit(self._text_surf, self.rect)

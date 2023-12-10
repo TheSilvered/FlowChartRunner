@@ -47,6 +47,9 @@ class TextBox(UIBaseComponent):
     def focused(self, focus):
         if self._focused != focus:
             self.selection_start = None
+        else:
+            return
+
         if focus:
             pg.key.set_repeat(400, 40)
             self._focused = True
@@ -151,7 +154,7 @@ class TextBox(UIBaseComponent):
         selection_end   = max(self.caret_pos, self.selection_start)
         return selection_start, selection_end
 
-    def draw(self, screen: pg.Surface):
+    def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:
         caret_pos = self.__get_caret_pos()
         area_rect = self.__get_area_rect(caret_pos)
 

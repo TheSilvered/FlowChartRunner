@@ -25,7 +25,7 @@ class Pos:
         try:
             return Pos(self.x + other[0], self.y + other[1])
         except Exception:
-            raise NotImplemented
+            return NotImplemented
 
     def __iadd__(self, other):
         return self.__add__(other)
@@ -34,10 +34,24 @@ class Pos:
         try:
             return Pos(self.x - other[0], self.y - other[1])
         except Exception:
+            return NotImplemented
+
+    def __mul__(self, other):
+        try:
+            return Pos(self.x * other[0], self.y * other[1])
+        except Exception:
             raise NotImplemented
 
-    def __isub__(self, other):
-        return self.__sub__(other)
+    def __imul__(self, other):
+        return self.__mul__(other)
+
+    def __truediv__(self, other):
+        try:
+            return Pos(self.x / other[0], self.y / other[1])
+        except ZeroDivisionError as e:
+            raise e
+        except Exception:
+            raise NotImplemented
 
     def __getitem__(self, item):
         if item == 0:
@@ -75,6 +89,10 @@ class UIBaseComponent(ABC):
 
     def add_constraint(self, constraint):
         self._constraints.append(constraint)
+        return self
+
+    def clear_constraints(self):
+        self._constraints.clear()
 
     @property
     def rect(self) -> pg.Rect:
@@ -126,7 +144,7 @@ class UIBaseComponent(ABC):
 
     @size.setter
     def size(self, value: pos_t):
-        self._rect.size = Pos(*value).t
+        self._rect.size = value
 
     @property
     def size_i(self) -> Pos:
@@ -155,3 +173,12 @@ class UIBaseComponent(ABC):
     @property
     def hi(self):
         return int(self.h)
+
+
+class DummyComponent(UIBaseComponent):
+    def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:
+        # pg.draw.rect(screen, (255, 0, 255), self.rect, 1)
+        pass
+
+    def handle_event(self, event: pg.event.Event) -> bool:
+        return False

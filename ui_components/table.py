@@ -34,7 +34,7 @@ class Table(UIBaseComponent):
     def handle_event(self, event: pg.event.Event) -> bool:
         return False
 
-    def draw(self, screen: pg.Surface) -> None:
+    def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:
         col_rects = []
         curr_x = self.x
         for i in range(self.num_cols):
@@ -63,6 +63,6 @@ class DictTable(Table):
         super().__init__(pos, [line_height() * len(dictionary)], [PROPERTY_NAME_COL_WIDTH, PROPERTY_VALUE_COL_WIDTH])
         self.dictionary = dictionary
 
-    def draw(self, screen: pg.Surface) -> None:
+    def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:
         self.data = list(self.dictionary.items())
         super().draw(screen)

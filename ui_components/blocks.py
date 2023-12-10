@@ -1,8 +1,14 @@
 from __future__ import annotations
+
 import pygame as pg
 from abc import ABC, abstractmethod
+from typing import Iterable
+from enum import Enum, auto
+
 from draw_utils import *
-from text_rendering import *
+from text_rendering import write_text
+from asset_manager import get_image
+
 from .constants import (
     BLOCK_BG_COLOR,
     BLOCK_BORDER_COLOR,
@@ -11,11 +17,10 @@ from .constants import (
     ERROR_BORDER_COLOR,
     PENDING_NEXT_BLOCK_BORDER_COLOR
 )
-from typing import Iterable
-from enum import Enum, auto
-from asset_manager import get_image
 from .arrow_point_selector import ArrowDirection
 from .base_component import UIBaseComponent, Pos, pos_t
+from .text_label import TextLabel
+from .constraint import Anchor, AnchorPoint, Offset
 
 
 class BlockState(Enum):
@@ -38,7 +43,9 @@ _block_state_colors = {
 class BlockBase(UIBaseComponent, ABC):
     def __init__(self, content: str, prev_block: _prev_block_t = None):
         super().__init__(pg.Rect(0, 0, 0, 0))
-        self.content: str = content
+        self.content: TextLabel = TextLabel((0, 0), content, True, "center")
+        self.content.add_constraint(Anchor(self, AnchorPoint.CC, AnchorPoint.CC))
+
         self._next_block: BlockBase | None = None
         self.in_point: ArrowDirection = ArrowDirection.TOP
         try:
@@ -55,9 +62,10 @@ class BlockBase(UIBaseComponent, ABC):
         else:
             for block in prev_block:
                 block.next_block = self
+        self.state = BlockState.IDLE
 
     @abstractmethod
-    def _draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
+    def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:
         pass
 
     @property
@@ -105,78 +113,56 @@ _prev_block_t = BlockBase | Iterable[BlockBase] | None
 class StartBlock(BlockBase):
     def __init__(self, content: str = "START"):
         super().__init__(content)
-        self._surf_cache = None
         self._editable = False
 
-    def _draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
-        text = write_text_highlighted(self.content, "center")
-        text_size = list(text.get_size())
-        text_size[0] += 20
-        text_size[1] += 20
-        draw_rect(
-            screen,
-            pg.Rect(list(self.pos + global_offset), text_size),
-            BLOCK_BG_COLOR,
-            text_size[1],
-            2,
-            _block_state_colors[state])
-        screen.blit(text, list(self.pos + (10, 10) + global_offset))
+    def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:
+        draw_rect(screen, self.rect, BLOCK_BG_COLOR, self.content.hi + 20, 2, _block_state_colors[self.state])
+        self.content.draw(screen)
 
     @property
     def size(self) -> Pos:
-        text_size = get_text_size(self.content)
-        return Pos(text_size[0] + 20, text_size[1] + 20)
+        return self.content.size + (20, 20)
 
 
 class EndBlock(BlockBase):
     def __init__(self, prev_block: _prev_block_t, content: str = "END"):
         super().__init__(content, prev_block)
-        self._surf_cache = None
         self._editable = False
 
-    def _draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
-        text = write_text_highlighted(self.content, "center")
-        text_size = list(text.get_size())
-        text_size[0] += 20
-        text_size[1] += 20
-        draw_rect(
-            screen,
-            pg.Rect(list(self.pos + global_offset), text_size),
-            BLOCK_BG_COLOR,
-            text_size[1],
-            2,
-            _block_state_colors[state])
-        screen.blit(text, list(self.pos + (10, 10) + global_offset))
+    def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:
+        draw_rect(screen, self.rect, BLOCK_BG_COLOR, self.content.hi + 20, 2, _block_state_colors[self.state])
+        self.content.draw(screen)
 
     @property
     def size(self) -> Pos:
-        text_size = get_text_size(self.content)
-        return Pos(text_size[0] + 20, text_size[1] + 20)
+        return self.content.size + (20, 20)
 
 
 class IOBlock(BlockBase):
     def __init__(self, prev_block: _prev_block_t, content: str, input_: bool = False):
         super().__init__(content, prev_block)
+        self.content.add_constraint(Offset((-5, 0)))
         self.is_input = input_
 
-    def _draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
-        text_surf = write_text_highlighted(self.content, "center")
-
-        text_w, text_h = text_surf.get_size()
-        block = draw_parallelogram((text_w + 35, text_h + 20), 10, BLOCK_BG_COLOR, _block_state_colors[state])
-        screen.blit(block, list(self.pos + global_offset))
-        info_x = self.pos[0] + text_w + 22
-        info_y = self.pos[1] + 2
+    def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:
+        block = draw_parallelogram(
+            (self.content.size + (35, 20)).ti,
+            10,
+            BLOCK_BG_COLOR,
+            _block_state_colors[self.state]
+        )
+        screen.blit(block, self.pos.ti)
+        info_x = self.x + self.content.size.x + 22
+        info_y = self.y + 2
         if self.is_input:
-            screen.blit(get_image("input.png"), (info_x + global_offset[0], info_y + global_offset[1]))
+            screen.blit(get_image("input.png"), (info_x, info_y))
         else:
-            screen.blit(get_image("output.png"), (info_x + global_offset[0], info_y + global_offset[1]))
-        screen.blit(text_surf, list(self.pos + (15, 10) + global_offset))
+            screen.blit(get_image("output.png"), (info_x, info_y))
+        self.content.draw(screen)
 
     @property
     def size(self) -> Pos:
-        text_size = get_text_size(self.content)
-        return Pos(text_size[0] + 35, text_size[1] + 20)
+        return self.content.size + (35, 20)
 
 
 class _OptionBlock(BlockBase):
@@ -184,7 +170,7 @@ class _OptionBlock(BlockBase):
         super().__init__("")
         self.out_point = out_point
 
-    def _draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
+    def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:
         raise NotImplementedError("an option block cannot be drawn")
 
     @property
@@ -222,7 +208,7 @@ class CondBlock(BlockBase):
         return f"{self.__class__.__name__}(on_true: {self.on_true.next_block.__class__.__name__}," \
                f" on_false: {self.on_false.next_block.__class__.__name__})"
 
-    def __draw_branch(self, screen, name, direction, global_offset):
+    def __draw_branch(self, screen, name, direction):
         text = write_text(name)
         text_rect = pg.Rect((0, 0), text.get_size())
         if direction == ArrowDirection.TOP:
@@ -233,62 +219,55 @@ class CondBlock(BlockBase):
             text_rect.bottomright = self.rect.midleft
         else:
             text_rect.bottomleft = self.rect.midright
-        text_rect.x += global_offset[0]
-        text_rect.y += global_offset[1]
         screen.blit(text, text_rect)
 
-    def _draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
-        text_surf = write_text_highlighted(self.content, "center")
-
-        text_w, text_h = text_surf.get_size()
-        block = draw_rombus((text_w * 2 + 20, text_h * 2 + 20), BLOCK_BG_COLOR, _block_state_colors[state])
-        screen.blit(block, list(self.pos + global_offset))
-        screen.blit(text_surf, list(self.pos + (text_w // 2 + 10, text_h // 2 + 10) + global_offset))
-        self.__draw_branch(screen, self.true_branch, self.on_true.out_point, global_offset)
-        self.__draw_branch(screen, self.false_branch, self.on_false.out_point, global_offset)
+    def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:
+        block = draw_rombus(
+            (self.content.size * (2, 2) + (20, 20)).ti,
+            BLOCK_BG_COLOR,
+            _block_state_colors[self.state]
+        )
+        screen.blit(block, self.pos.ti)
+        self.content.draw(screen)
+        self.__draw_branch(screen, self.true_branch, self.on_true.out_point)
+        self.__draw_branch(screen, self.false_branch, self.on_false.out_point)
 
     @property
     def size(self) -> Pos:
-        text_size = get_text_size(self.content)
-        return Pos(text_size[0] * 2 + 20, text_size[1] * 2 + 20)
+        return self.content.size * (2, 2) + (20, 20)
 
 
 class InitBlock(BlockBase):
     def __init__(self, prev_block: _prev_block_t, content: str):
         super().__init__(content, prev_block)
 
-    def _draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
-        text_surf = write_text_highlighted(self.content, "center")
-
-        text_w, text_h = text_surf.get_size()
+    def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:
         block = draw_hexagon(
-            (text_w + 40, text_h + 20),
-            10, BLOCK_BG_COLOR, _block_state_colors[state])
-        screen.blit(block, list(self.pos + global_offset))
-        screen.blit(text_surf, list(self.pos + (20, 10) + global_offset))
+            (self.content.size + (40, 20)).ti,
+            10, BLOCK_BG_COLOR, _block_state_colors[self.state]
+        )
+        screen.blit(block, self.pos.ti)
+        self.content.draw(screen)
 
     @property
     def size(self) -> Pos:
-        text_size = get_text_size(self.content)
-        return Pos(text_size[0] + 40, text_size[1] + 20)
+        return self.content.size + (40, 20)
 
 
 class CalcBlock(BlockBase):
     def __init__(self, prev_block: _prev_block_t, content: str):
         super().__init__(content, prev_block)
 
-    def _draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
-        text_surf = write_text_highlighted(self.content, "center")
-
-        text_w, text_h = text_surf.get_size()
+    def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:
         draw_rect(
             screen,
-            pg.Rect(list(self.pos + global_offset), (text_w + 20, text_h + 20)),
+            self.rect,
             BLOCK_BG_COLOR,
-            0, 2, _block_state_colors[state])
-        screen.blit(text_surf, list(self.pos + (10, 10) + global_offset))
+            0, 2,
+            _block_state_colors[self.state]
+        )
+        self.content.draw(screen)
 
     @property
     def size(self) -> Pos:
-        text_size = get_text_size(self.content)
-        return Pos(text_size[0] + 20, text_size[1] + 20)
+        return self.content.size + (20, 20)
