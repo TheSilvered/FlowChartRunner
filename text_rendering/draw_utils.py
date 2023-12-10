@@ -5,7 +5,6 @@ from asset_manager import full_asset_path
 
 _text_cache = {}
 _text_size_cache = {}
-_images = {}
 
 _font: pg.font.Font | None = None
 
@@ -102,6 +101,10 @@ def write_text(
     surface = _text_cache.get((text, align, width, selection_range), None)
     if surface is not None:
         return surface
+
+    if len(_text_cache) > 100:
+        _text_cache.clear()
+
     if add_newline_width:
         surface = pg.Surface((surf_width + SELECTION_NEWLINE_WIDTH, surf_height), pg.SRCALPHA)
     else:

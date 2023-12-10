@@ -268,8 +268,8 @@ class InfoBar:
         self.table[0, 1] = self.language.info.type.value.format(name=self.__block_name())
         self.table[1, 1] = self.language.info.position.value.format(x=self.block.pos.x, y=self.block.pos.y)
         self.table[2, 1] = self.language.info.size.value.format(
-            w=self.block.get_size()[0],
-            h=self.block.get_size()[1]
+            w=self.block.w,
+            h=self.block.h
         )
 
         if isinstance(self.block, IOBlock):

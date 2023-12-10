@@ -19,8 +19,8 @@ class Editor:
         self.langauge = language
 
         self.start_block.pos = [0, 0]
-        end_block_x = (self.start_block.get_size()[0] - end_block.get_size()[0]) / 2 + self.start_block.pos[0]
-        end_block.pos = [end_block_x, self.start_block.get_size()[1] + line_height() * 3]
+        end_block_x = (self.start_block.w - end_block.w) / 2 + self.start_block.pos[0]
+        end_block.pos = [end_block_x, self.start_block.h + line_height() * 3]
 
         self.blocks: list[BlockBase] = [self.start_block, end_block]
         self.dragging_blocks: list[BlockBase] | None = None
@@ -150,7 +150,7 @@ class Editor:
         if self.dragging_blocks is not None:
             self.has_moved = True
             for block in self.dragging_blocks:
-                block.add_pos(event.rel)
+                block.pos += event.rel
         elif self.dragging_global:
             self.global_offset[0] += event.rel[0]
             self.global_offset[1] += event.rel[1]
