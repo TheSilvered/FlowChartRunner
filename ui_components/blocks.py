@@ -57,7 +57,7 @@ class BlockBase(UIBaseComponent, ABC):
                 block.next_block = self
 
     @abstractmethod
-    def draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
+    def _draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
         pass
 
     @property
@@ -108,7 +108,7 @@ class StartBlock(BlockBase):
         self._surf_cache = None
         self._editable = False
 
-    def draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
+    def _draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
         text = write_text_highlighted(self.content, "center")
         text_size = list(text.get_size())
         text_size[0] += 20
@@ -134,7 +134,7 @@ class EndBlock(BlockBase):
         self._surf_cache = None
         self._editable = False
 
-    def draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
+    def _draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
         text = write_text_highlighted(self.content, "center")
         text_size = list(text.get_size())
         text_size[0] += 20
@@ -159,7 +159,7 @@ class IOBlock(BlockBase):
         super().__init__(content, prev_block)
         self.is_input = input_
 
-    def draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
+    def _draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
         text_surf = write_text_highlighted(self.content, "center")
 
         text_w, text_h = text_surf.get_size()
@@ -184,7 +184,7 @@ class _OptionBlock(BlockBase):
         super().__init__("")
         self.out_point = out_point
 
-    def draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
+    def _draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
         raise NotImplementedError("an option block cannot be drawn")
 
     @property
@@ -237,7 +237,7 @@ class CondBlock(BlockBase):
         text_rect.y += global_offset[1]
         screen.blit(text, text_rect)
 
-    def draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
+    def _draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
         text_surf = write_text_highlighted(self.content, "center")
 
         text_w, text_h = text_surf.get_size()
@@ -257,7 +257,7 @@ class InitBlock(BlockBase):
     def __init__(self, prev_block: _prev_block_t, content: str):
         super().__init__(content, prev_block)
 
-    def draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
+    def _draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
         text_surf = write_text_highlighted(self.content, "center")
 
         text_w, text_h = text_surf.get_size()
@@ -277,7 +277,7 @@ class CalcBlock(BlockBase):
     def __init__(self, prev_block: _prev_block_t, content: str):
         super().__init__(content, prev_block)
 
-    def draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
+    def _draw(self, screen, state: BlockState = BlockState.IDLE, global_offset=(0, 0)):
         text_surf = write_text_highlighted(self.content, "center")
 
         text_w, text_h = text_surf.get_size()

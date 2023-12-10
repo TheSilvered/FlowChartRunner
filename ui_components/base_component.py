@@ -1,6 +1,7 @@
 import pygame as pg
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import final
 
 
 @dataclass(frozen=True)
@@ -56,14 +57,24 @@ pos_t = Pos | tuple[int | float, int | float] | list[int | float]
 class UIBaseComponent(ABC):
     def __init__(self, rect: pg.Rect):
         self._rect = rect
+        self._constraints = []
 
     @abstractmethod
     def handle_event(self, event: pg.event.Event) -> bool:
         pass
 
+    @final
+    def draw(self, screen: pg.Surface, *args, **kwargs) -> None:
+        for constraint in self._constraints:
+            constraint.apply(self)
+        self._draw(screen, *args, **kwargs)
+
     @abstractmethod
-    def draw(self, screen: pg.Surface) -> None:
+    def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:
         pass
+
+    def add_constraint(self, constraint):
+        self._constraints.append(constraint)
 
     @property
     def rect(self) -> pg.Rect:

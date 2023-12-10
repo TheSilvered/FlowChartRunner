@@ -8,12 +8,13 @@ from .constants import (
 )
 from text_rendering.constants import HC_STRS
 from typing import Callable
+from .base_component import UIBaseComponent
 
 movement_keys = pg.K_UP, pg.K_DOWN, pg.K_LEFT, pg.K_RIGHT, pg.K_HOME, pg.K_END
 control_keys = pg.K_LCTRL, pg.K_RCTRL, pg.K_LSHIFT, pg.K_RSHIFT, pg.K_LALT, pg.K_RALT
 
 
-class TextBox:
+class TextBox(UIBaseComponent):
     def __init__(
             self,
             rect: pg.Rect,
@@ -22,9 +23,10 @@ class TextBox:
             on_send: Callable = None, on_send_args: tuple = (),
             single_line: bool = False
     ):
+        super().__init__(rect)
+
         self._text = ""
         self._caret_pos = 0
-        self.rect: pg.Rect = rect
         self._focused: bool = False
         self.area_rect_offset = [0, 0]
         self.blink_start = 0
@@ -116,7 +118,7 @@ class TextBox:
     def __get_area_rect(self, caret_pos):
         area_rect = pg.Rect(
             self.area_rect_offset,
-            (self.rect.w - TEXTBOX_PADDING * 2, self.rect.h - TEXTBOX_PADDING * 2))
+            (self.w - TEXTBOX_PADDING * 2, self.h - TEXTBOX_PADDING * 2))
         if caret_pos[0] < area_rect.left:
             area_rect.left = caret_pos[0]
         elif caret_pos[0] + 2 >= area_rect.right:
@@ -153,8 +155,8 @@ class TextBox:
         caret_pos = self.__get_caret_pos()
         area_rect = self.__get_area_rect(caret_pos)
 
-        caret_pos[0] += self.rect.x + TEXTBOX_PADDING - self.area_rect_offset[0]
-        caret_pos[1] += self.rect.y + TEXTBOX_PADDING - self.area_rect_offset[1]
+        caret_pos[0] += self.x + TEXTBOX_PADDING - self.area_rect_offset[0]
+        caret_pos[1] += self.y + TEXTBOX_PADDING - self.area_rect_offset[1]
 
         if self.selection_start is None or self.caret_pos == self.selection_start:
             selection_range = None
@@ -179,7 +181,7 @@ class TextBox:
         else:
             draw_rect(screen, self.rect, TEXTBOX_BG_COLOR, TEXTBOX_PADDING, 2, TEXTBOX_BORDER_COLOR)
 
-        screen.blit(rendered_text, (self.rect.x + TEXTBOX_PADDING, self.rect.y + TEXTBOX_PADDING), area_rect)
+        screen.blit(rendered_text, (self.x + TEXTBOX_PADDING, self.y + TEXTBOX_PADDING), area_rect)
 
         curr_time = time.perf_counter()
         if not self.focused:
@@ -200,8 +202,8 @@ class TextBox:
 
     def __get_caret_pos_from_coordinates(self, pos):
         pos = list(pos)
-        pos[0] -= self.rect.x + TEXTBOX_PADDING
-        pos[1] -= self.rect.y + TEXTBOX_PADDING
+        pos[0] -= self.x + TEXTBOX_PADDING
+        pos[1] -= self.y + TEXTBOX_PADDING
         orig_caret_pos = self.caret_pos
         self.caret_pos = 0
 
