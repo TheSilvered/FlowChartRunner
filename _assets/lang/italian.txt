@@ -31,6 +31,7 @@ error.name.math_error=Errore Matematico
 error.name.syntax_error=Errore di Sintassi
 error.name.comp_error=Errore di Compilazione
 error.name.var_error=Errore di Variabile
+error.name.call_error=Errore di Chiamata
 
 error.msg.invalid_op_types='{operand}' non può essere applicato a {left_type} e {right_type}
 error.msg.invalid_uni_op_types='{operand}' non può essere applicato a {op_type}
@@ -52,3 +53,9 @@ error.msg.expected_value=atteso un valore
 error.msg.var_not_defined=la variabile '{var_name}' non è definita
 error.msg.var_already_defined=la variabile '{var_name}' è già definita
 error.msg.incomplete_tree=non tutti i blocchi eseguibili sono collegati
+error.msg.too_few_arguments=previsto/i al meno {min_args} argomento/i, {arg_num} dati
+error.msg.too_many_arguments=previsto/i al massimo {min_args} argomento/i, {arg_num} dati
+error.msg.wrong_arg_num=previsto/i {args} argomento/i, {arg_num} given
+error.msg.expected_arg_type='{func_name}' prevedeva un oggetto {type_expected} per l'argomento {arg_idx}, dato {type_received} invece
+error.msg.undefined_func=la funzione '{func_name}' non è definita per {value}
+error.msg.zero_root_index=l'indice della radice è zero

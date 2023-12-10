@@ -4,7 +4,7 @@ KEYWORDS = ("read", "as", "and", "or", "not")
 TYPE_NAMES = ("Number", "String", "Boolean")
 CONSTANTS = ("true", "false", "_pi", "_e")
 BUILTIN_FUNCTIONS = ("mod", "sin", "cos", "tan", "arcsin", "arccos", "arctan", "floor", "ceil", "round", "log", "sign",
-                     "sqrt", "root")
+                     "sqrt", "root", "max", "min", "abs")
 ARITH_OPERATORS = "+-*/^=<>%"
 OTHER_SYMBOLS = "()[]{},"
 

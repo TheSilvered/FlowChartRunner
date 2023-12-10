@@ -16,6 +16,7 @@ class NodeType(Enum):
     COMPOUND = auto()
     WRITE = auto()
     READ = auto()
+    CALL = auto()
 
 
 class BinOp(Enum):
@@ -270,3 +271,59 @@ class ReadNode(Node):
 
     def __str__(self):
         return f"ReadNode(name={self.name!r}, type={self.type})"
+
+
+class CallNode(Node):
+    def __init__(self, func_name: str, arg_nodes: list[Node]):
+        super().__init__(NodeType.CALL)
+        self.func_name = func_name
+        self.arg_nodes = arg_nodes
+
+    def evaluate(self, sym_table: dict, console: Console) -> ExeValue:
+        arg_values = []
+        for arg_node in self.arg_nodes:
+            value = arg_node.evaluate(sym_table, console)
+            if value.error():
+                return value
+            arg_values.append(value)
+
+        if self.func_name == "mod":
+            value = mod_func(arg_values)
+        elif self.func_name == "sin":
+            value = sin_func(arg_values)
+        elif self.func_name == "cos":
+            value = cos_func(arg_values)
+        elif self.func_name == "tan":
+            value = tan_func(arg_values)
+        elif self.func_name == "arcsin":
+            value = arcsin_func(arg_values)
+        elif self.func_name == "arccos":
+            value = arccos_func(arg_values)
+        elif self.func_name == "arctan":
+            value = arctan_func(arg_values)
+        elif self.func_name == "floor":
+            value = floor_func(arg_values)
+        elif self.func_name == "ceil":
+            value = ceil_func(arg_values)
+        elif self.func_name == "round":
+            value = round_func(arg_values)
+        elif self.func_name == "log":
+            value = log_func(arg_values)
+        elif self.func_name == "sign":
+            value = sign_func(arg_values)
+        elif self.func_name == "sqrt":
+            value = sqrt_func(arg_values)
+        elif self.func_name == "root":
+            value = root_func(arg_values)
+        elif self.func_name == "max":
+            value = max_func(arg_values)
+        elif self.func_name == "min":
+            value = min_func(arg_values)
+        elif self.func_name == "abs":
+            value = abs_func(arg_values)
+        else:
+            value = ExeError("error.name.call_error", "error.msg.func_not_defined", func=self.func_name)
+        return value
+
+    def __str__(self):
+        return f"CallNode(func_name={self.func_name!r}, arg_nodes={self.arg_nodes})"

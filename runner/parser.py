@@ -263,9 +263,7 @@ class Parser:
             self.advance()
             return node
         elif self.tok == TokenType.IDENT:
-            node = GetNode(self.tok.value)
-            self.advance()
-            return node
+            return self.parse_function_call()
         elif self.tok == TokenType.PLUS:
             self.advance()
             value = self.parse_value()
@@ -289,6 +287,26 @@ class Parser:
             return expr
         else:
             return ExecutionError("error.name.syntax_error", "error.msg.unexpected_token", tok_type=self.tok.type.name)
+
+    def parse_function_call(self):
+        ident = self.tok.value
+        self.advance()
+        if self.tok != TokenType.LPAREN:
+            return GetNode(ident)
+        self.advance()
+        args = []
+        while not self.finished:
+            value = self.parse_expr()
+            if self.is_error(value):
+                return value
+            args.append(value)
+            if self.tok != TokenType.COMMA:
+                break
+            self.advance()
+        if self.tok != TokenType.RPAREN:
+            return ExecutionError("error.name.syntax_error", "error.msg.expected_sym", string=")")
+        self.advance()
+        return CallNode(ident, args)
 
     @staticmethod
     def __type_name_to_type(type_name):

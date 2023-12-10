@@ -31,6 +31,7 @@ error.name.math_error=Math Error
 error.name.syntax_error=Syntax Error
 error.name.comp_error=Compilation Error
 error.name.var_error=Variable Error
+error.name.call_error=Call Error
 
 error.msg.invalid_op_types='{operand}' cannot be applied to {left_type} and {right_type}
 error.msg.invalid_uni_op_types='{operand}' cannot be applied to {op_type}
@@ -52,3 +53,9 @@ error.msg.expected_value=expected a value
 error.msg.var_not_defined=variable '{var_name}' is not defined
 error.msg.var_already_defined=variable '{var_name}' is already defined
 error.msg.incomplete_tree=not all executable blocks are connected
+error.msg.too_few_arguments=expected at least {min_args} argument(s), {arg_num} given
+error.msg.too_many_arguments=expected at most {max_args} argument(s), {arg_num} given
+error.msg.wrong_arg_num=expected {args} argument(s), {arg_num} given
+error.msg.expected_arg_type='{func_name}' expected a {type_expected} object for argument {arg_idx}, got {type_received} instead
+error.msg.undefined_func=the function '{func_name}' is not defined for {value}
+error.msg.zero_root_index=the index of the root is zero
