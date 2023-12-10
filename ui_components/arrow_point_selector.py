@@ -1,8 +1,8 @@
 import pygame as pg
-from asset_manager import get_image
+from asset_manager import get_icon
 from .constants import (
     ARROW_POINT_SELECTOR_RECT_W, ARROW_POINT_SELECTOR_RECT_H, ARROW_POINT_SELECTOR_RECT_COLOR,
-    ARROW_POINT_SELECTOR_PADDING
+    ARROW_POINT_SELECTOR_PADDING, ARROW_POINT_ACTIVE_COLOR, ARROW_POINT_SELECTED_COLOR, ARROW_POINT_DISABLED_COLOR
 )
 from draw_utils import draw_rect
 
@@ -18,7 +18,7 @@ class ArrowPointSelector:
     def __init__(self, direction: ArrowDirection, inward: bool):
         self.direction = direction
         self.inward = inward
-        arrow_image = get_image("arrow_button.png", True)
+        arrow_image = get_icon("arrow_button.png", ARROW_POINT_ACTIVE_COLOR)
 
         self.links: list[ArrowPointSelector] = []
 
@@ -47,11 +47,11 @@ class ArrowPointSelector:
 
     def __get_image(self, direction):
         if direction == self.direction:
-            arrow_image = get_image("arrow_button_selected.png", True)
+            arrow_image = get_icon("arrow_button.png", ARROW_POINT_SELECTED_COLOR)
         elif direction in [s.direction for s in self.links]:
-            arrow_image = get_image("arrow_button_disabled.png", True)
+            arrow_image = get_icon("arrow_button.png", ARROW_POINT_DISABLED_COLOR)
         else:
-            arrow_image = get_image("arrow_button.png", True)
+            arrow_image = get_icon("arrow_button.png", ARROW_POINT_ACTIVE_COLOR)
 
         if self.inward:
             arrow_image = pg.transform.rotate(arrow_image, 180)

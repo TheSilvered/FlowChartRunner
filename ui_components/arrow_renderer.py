@@ -1,6 +1,6 @@
 import pygame as pg
 from .constants import ARROW_COLOR
-from asset_manager import get_image
+from asset_manager import get_icon
 
 
 def draw_arrows(screen: pg.Surface, blocks, offset):
@@ -22,7 +22,7 @@ def draw_arrows(screen: pg.Surface, blocks, offset):
                 out_p_name = b.on_false.out_point
                 _draw_arrow(screen, b.rect, out_p_name, b.on_false.next_block.rect, in_p_name, offset, arrow_tips)
 
-    arrow_image = get_image("arrow.png")
+    arrow_image = get_icon("arrow.png", ARROW_COLOR)
     for pos, rotation in arrow_tips:
         rotated_image = pg.transform.rotate(arrow_image, rotation)
         screen.blit(rotated_image, pos)
