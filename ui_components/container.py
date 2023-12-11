@@ -35,6 +35,7 @@ class Container(UIBaseComponent):
         self.direction = direction
         self.align = align
         self.padding = padding
+        self.__drawn_components = []
 
         self.apply_constraints()
 
@@ -68,7 +69,7 @@ class Container(UIBaseComponent):
             self.__apply_hs_constraints()
 
     def __apply_stacked_constraints(self, parent_point, child_point):
-        final_comps = [self.components[0]]
+        self.__drawn_components = [self.components[0]]
 
         self.components[0].add_constraint(Anchor(self, child_point, child_point))
         prev_comp = self.components[0]
@@ -76,12 +77,11 @@ class Container(UIBaseComponent):
             if self.padding:
                 padding_element = DummyComponent(pg.Rect(0, 0, self.padding, self.padding))
                 padding_element.add_constraint(Anchor(prev_comp, parent_point, child_point))
-                final_comps.append(padding_element)
+                self.__drawn_components.append(padding_element)
                 prev_comp = padding_element
-            final_comps.append(comp)
+            self.__drawn_components.append(comp)
             comp.add_constraint(Anchor(prev_comp, parent_point, child_point))
             prev_comp = comp
-        self.components = final_comps
 
     def __apply_tb_constraints(self):
         if self.align == ContainerAlignment.LEFT_TOP:
@@ -116,6 +116,7 @@ class Container(UIBaseComponent):
             comp.add_constraint(Anchor(self, ac, ac))
             comp.add_constraint(DynamicOffset(self.get_v_offset, (i, n / d)))
             n += 2
+        self.__drawn_components = self.components
 
     def __apply_lr_constraints(self):
         if self.align == ContainerAlignment.LEFT_TOP:
@@ -150,6 +151,7 @@ class Container(UIBaseComponent):
             comp.add_constraint(Anchor(self, ac, ac))
             comp.add_constraint(DynamicOffset(self.get_h_offset, (i, n/d)))
             n += 2
+        self.__drawn_components = self.components
 
     def handle_event(self, event: pg.event.Event) -> bool:
         for component in self.components:
@@ -158,5 +160,5 @@ class Container(UIBaseComponent):
         return False
 
     def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:
-        for component in self.components:
+        for component in self.__drawn_components:
             component.draw(screen, *args, **kwargs)
