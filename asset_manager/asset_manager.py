@@ -3,6 +3,7 @@ import os.path
 
 _images = {}
 _icons = {}
+_fonts = {}
 _asset_path = ""
 
 
@@ -11,15 +12,15 @@ def set_asset_path(path):
     _asset_path = os.path.abspath(path)
 
 
-def full_asset_path(path):
-    return os.path.join(_asset_path, path)
+def get_asset_path(path, base_folder):
+    return os.path.join(os.path.join(_asset_path, base_folder), path)
 
 
 def get_image(path, is_transparent=False):
     image = _images.get(path, None)
     if image is not None:
         return image
-    image = pg.image.load(full_asset_path(path))
+    image = pg.image.load(get_asset_path(path, "images"))
     if is_transparent:
         image.convert_alpha()
     else:
@@ -33,7 +34,7 @@ def get_icon(path, color):
     icon = _icons.get((path, color), None)
     if icon is not None:
         return icon
-    icon = pg.image.load(full_asset_path(path))
+    icon = pg.image.load(get_asset_path(path, "icons"))
     icon.convert_alpha()
     for x in range(icon.get_width()):
         for y in range(icon.get_height()):
@@ -41,3 +42,16 @@ def get_icon(path, color):
             icon.set_at((x, y), color + (alpha,))
     _icons[(path, color)] = icon
     return icon
+
+
+def get_language(path):
+    return get_asset_path(path, "langs")
+
+
+def get_font(path, size):
+    font = _fonts.get((path, size), None)
+    if font is not None:
+        return font
+    font = pg.font.Font(get_asset_path(path, "fonts"), size)
+    _fonts[(path, size)] = font
+    return font

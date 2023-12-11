@@ -1,7 +1,7 @@
 from .highlighter import highlight_text
-from .draw_utils import write_text
-from .draw_utils import write_text_highlighted
-from .draw_utils import get_text_size
-from .draw_utils import line_height
-from .draw_utils import load_font
-from .constants import FONT_SIZE
+from .renderer import write_mono_text, write_ui_text
+from .renderer import write_mono_text_hlt, write_ui_text_hlt
+from .renderer import get_mono_text_size, get_ui_text_size
+from .renderer import mono_line_height, ui_line_height
+from .renderer import load_fonts
+from .constants import MONO_FONT_SIZE

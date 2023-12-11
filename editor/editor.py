@@ -1,7 +1,7 @@
 import pygame as pg
 
 from runner import Runner, RunnerError
-from text_rendering import line_height
+from text_rendering import mono_line_height
 from ui_components import (
     InfoBar, draw_arrows, StartBlock, EndBlock, BlockBase, IOBlock, CondBlock, InitBlock, CalcBlock, BlockState,
     TextBox
@@ -20,7 +20,7 @@ class Editor:
 
         self.start_block.pos = [0, 0]
         end_block_x = (self.start_block.w - end_block.w) / 2 + self.start_block.pos[0]
-        end_block.pos = [end_block_x, self.start_block.h + line_height() * 3]
+        end_block.pos = [end_block_x, self.start_block.h + mono_line_height() * 3]
 
         self.blocks: list[BlockBase] = [self.start_block, end_block]
         self.dragging_blocks: list[BlockBase] | None = None
@@ -35,12 +35,7 @@ class Editor:
         self.selected_blocks: list[BlockBase] = []
         self.global_offset = [0, 0]
         self.info_bar: InfoBar | None = None
-
-        self.input_textbox = TextBox(
-            rect=pg.Rect(10, 10, 300, line_height() + TEXTBOX_PADDING * 2),
-            on_send=self.__send_input,
-            single_line=True
-        )
+        self.input_textbox = None
 
     @property
     def pending_next_block(self):
@@ -106,10 +101,6 @@ class Editor:
         elif event.button != pg.BUTTON_LEFT:
             return
 
-        if self.input_textbox.rect.collidepoint(event.pos) and self.runner is not None:
-            self.input_textbox.focused = True
-            return
-
         block = self.intersect_point(event.pos)
         if block is not None:
             if self.pending_next_block is not None:
@@ -158,15 +149,11 @@ class Editor:
             self.update_select_area()
 
     def handle_event(self, event: pg.event.Event):
-        if self.input_textbox.focused and self.input_textbox.handle_event(event):
-            return
-
-        if event.type == pg.QUIT and self.runner is not None:
-            self.runner.stop()
-            self.runner = None
-
         if self.info_bar is not None and self.info_bar.handle_event(event):
             self.pending_next_block = None
+            return
+
+        if self.input_textbox is not None and self.input_textbox.handle_event(event):
             return
 
         if event.type == pg.MOUSEBUTTONDOWN:
@@ -214,17 +201,18 @@ class Editor:
                 self.fake_pending_next_block = self.selected_blocks[0]
                 self.selected_blocks = []
             elif event.key in (pg.K_DELETE, pg.K_BACKSPACE):
-                if len(self.selected_blocks) == 1:
-                    self.delete_block(self.selected_blocks[0])
-                elif self.pending_next_block is not None:
+                if self.pending_next_block is not None:
                     self.pending_next_block.next_block = None
                     self.pending_next_block = None
+                else:
+                    blocks = self.selected_blocks.copy()
+                    for block in blocks:
+                        self.delete_block(block)
             elif event.key == pg.K_r:
                 self.start_execution()
             elif event.key == pg.K_s:
                 if self.runner is not None:
-                    self.runner.stop()
-                    self.runner = None
+                    self.stop_execution()
             elif event.key == pg.K_p:
                 if self.runner is not None and self.runner.is_paused:
                     self.runner.resume()
@@ -241,6 +229,18 @@ class Editor:
             print(e.exe_err.format(self.langauge))
             return
         self.runner.start()
+        self.input_textbox = TextBox(
+            rect=pg.Rect(10, 10, 300, mono_line_height() + TEXTBOX_PADDING * 2),
+            on_send=self.__send_input,
+            single_line=True
+        )
+
+    def stop_execution(self):
+        if self.runner is None:
+            return
+        self.runner.stop()
+        self.runner = None
+        self.input_textbox = None
 
     def delete_block(self, block):
         # These blocks cannot be deleted
@@ -259,7 +259,7 @@ class Editor:
                     b.on_false.next_block = None
 
         self.blocks.remove(block)
-        self.selected_blocks.pop()
+        self.selected_blocks.remove(block)
 
     def __update_info_bar(self):
         if len(self.selected_blocks) != 1:
@@ -295,10 +295,10 @@ class Editor:
             for error in self.runner.get_queued_errors():
                 print(error.format(self.langauge))
             placeholder = self.runner.get_placeholder_text()
-            if placeholder is not None:
+            if placeholder is not None and self.input_textbox is not None:
                 self.input_textbox.placeholder_text = placeholder
             if not self.runner.is_running():
-                self.runner = None
+                self.stop_execution()
 
         for block in self.blocks:
             state = BlockState.IDLE
@@ -317,11 +317,11 @@ class Editor:
         if self.info_bar is not None and self.runner is None:
             self.info_bar.draw(screen)
 
-        if self.runner is not None:
+        if self.input_textbox is not None:
             self.input_textbox.draw(screen)
-        else:
-            self.input_textbox.focused = False
-            self.input_textbox.text = ""
 
         if self.selecting and self.runner is None:
             pg.draw.rect(screen, SELECTION_BORDER_COLOR, self.select_area, 1)
+
+    def quit(self):
+        self.stop_execution()

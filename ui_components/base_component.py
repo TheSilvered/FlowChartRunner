@@ -82,7 +82,7 @@ class UIBaseComponent(ABC):
         for constraint in self._constraints:
             constraint.apply(self)
         self._draw(screen, *args, **kwargs)
-        # pg.draw.rect(screen, (255, 0, 255), self.rect)
+        # pg.draw.rect(screen, (255, 0, 255), self.rect, 1)
 
     @abstractmethod
     def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:
@@ -145,7 +145,7 @@ class UIBaseComponent(ABC):
 
     @size.setter
     def size(self, value: pos_t):
-        self._rect.size = value
+        self._rect.size = Pos(*value).t
 
     @property
     def size_i(self) -> Pos:

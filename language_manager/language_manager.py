@@ -1,4 +1,5 @@
 import os.path
+from asset_manager import get_language
 
 
 class LanguageError(Exception):
@@ -49,7 +50,8 @@ class LanguageCategory:
 
 
 class Language:
-    def __init__(self, path):
+    def __init__(self, language_file):
+        path = get_language(language_file)
         self.__values = LanguageCategory(os.path.basename(os.path.splitext(path)[0]))
 
         with open(path, encoding="UTF-8") as f:

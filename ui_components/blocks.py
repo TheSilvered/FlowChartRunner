@@ -6,8 +6,8 @@ from typing import Iterable
 from enum import Enum, auto
 
 from draw_utils import *
-from text_rendering import write_text
-from asset_manager import get_image
+from text_rendering import write_mono_text
+from asset_manager import get_icon
 
 from .constants import (
     BLOCK_BG_COLOR,
@@ -155,9 +155,9 @@ class IOBlock(BlockBase):
         info_x = self.x + self.content.size.x + 22
         info_y = self.y + 2
         if self.is_input:
-            screen.blit(get_image("input.png"), (info_x, info_y))
+            screen.blit(get_icon("input.png", _block_state_colors[self.state]), (info_x, info_y))
         else:
-            screen.blit(get_image("output.png"), (info_x, info_y))
+            screen.blit(get_icon("output.png", _block_state_colors[self.state]), (info_x, info_y))
         self.content.draw(screen)
 
     @property
@@ -209,7 +209,7 @@ class CondBlock(BlockBase):
                f" on_false: {self.on_false.next_block.__class__.__name__})"
 
     def __draw_branch(self, screen, name, direction):
-        text = write_text(name)
+        text = write_mono_text(name)
         text_rect = pg.Rect((0, 0), text.get_size())
         if direction == ArrowDirection.TOP:
             text_rect.bottomleft = self.rect.midtop

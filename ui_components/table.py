@@ -2,7 +2,7 @@ import pygame as pg
 from .constants import (
     TABLE_BG_LIGHT, TABLE_BG_DARK, TABLE_H_PADDING, TABLE_V_PADDING, PROPERTY_NAME_COL_WIDTH, PROPERTY_VALUE_COL_WIDTH
 )
-from text_rendering import write_text, line_height
+from text_rendering import write_mono_text, mono_line_height
 from .base_component import UIBaseComponent
 
 
@@ -53,14 +53,14 @@ class Table(UIBaseComponent):
 
             for j, col in enumerate(row):
                 col_rect = col_rects[j]
-                text_surf = write_text(col)
+                text_surf = write_mono_text(col)
                 text_rect = pg.Rect(0, 0, self.col_widths[j], self.row_heights[i])
                 screen.blit(text_surf, (col_rect.x + TABLE_H_PADDING, row_rect.y + TABLE_V_PADDING), text_rect)
 
 
 class DictTable(Table):
     def __init__(self, pos, dictionary: dict):
-        super().__init__(pos, [line_height() * len(dictionary)], [PROPERTY_NAME_COL_WIDTH, PROPERTY_VALUE_COL_WIDTH])
+        super().__init__(pos, [mono_line_height() * len(dictionary)], [PROPERTY_NAME_COL_WIDTH, PROPERTY_VALUE_COL_WIDTH])
         self.dictionary = dictionary
 
     def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:

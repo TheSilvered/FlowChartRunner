@@ -151,3 +151,12 @@ class MatchWindowWidth(Constraint):
 class MatchWindowHeight(Constraint):
     def apply(self, ui_comp: UIBaseComponent):
         ui_comp.h = pg.display.get_window_size()[1]
+
+
+class MatchRect(Constraint):
+    def __init__(self, component):
+        self.component = component
+
+    def apply(self, ui_comp: UIBaseComponent):
+        ui_comp.pos = self.component.pos
+        ui_comp.size = self.component.size

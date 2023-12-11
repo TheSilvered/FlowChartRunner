@@ -1,7 +1,7 @@
 import time
 import pygame as pg
 from draw_utils import draw_rect
-from text_rendering import get_text_size, line_height, write_text, write_text_highlighted
+from text_rendering import get_mono_text_size, mono_line_height, write_mono_text, write_mono_text_hlt
 from .constants import (
     TEXTBOX_BG_COLOR, TEXTBOX_PADDING, TEXTBOX_CARET_COLOR, TEXTBOX_CARET_BLINK_SPEED, TEXTBOX_BORDER_COLOR,
     TEXTBOX_SELECTEC_BORDER_COLOR
@@ -9,6 +9,8 @@ from .constants import (
 from text_rendering.constants import HC_STRS
 from typing import Callable
 from .base_component import UIBaseComponent
+from .button import Button
+from .constraint import MatchRect
 
 movement_keys = pg.K_UP, pg.K_DOWN, pg.K_LEFT, pg.K_RIGHT, pg.K_HOME, pg.K_END
 control_keys = pg.K_LCTRL, pg.K_RCTRL, pg.K_LSHIFT, pg.K_RSHIFT, pg.K_LALT, pg.K_RALT
@@ -38,6 +40,7 @@ class TextBox(UIBaseComponent):
         self.on_send = on_send
         self.on_send_args = on_send_args
         self.__single_line = single_line
+        self.__tb_button = _TextBoxButton(self)
 
     @property
     def focused(self):
@@ -57,6 +60,9 @@ class TextBox(UIBaseComponent):
         else:
             pg.key.set_repeat()
             self._focused = False
+
+    def focus(self):
+        self.focused = True
 
     @property
     def caret_pos(self):
@@ -114,8 +120,8 @@ class TextBox(UIBaseComponent):
         line_count = self.text.count("\n", 0, self.caret_pos)
         if not ignore_x:
             caret_line = self.__get_current_caret_line(False)
-            caret_pos[0] = get_text_size(caret_line)[0]
-        caret_pos[1] = line_count * line_height()
+            caret_pos[0] = get_mono_text_size(caret_line)[0]
+        caret_pos[1] = line_count * mono_line_height()
         return caret_pos
 
     def __get_area_rect(self, caret_pos):
@@ -128,17 +134,17 @@ class TextBox(UIBaseComponent):
             area_rect.right = caret_pos[0] + 1
         if caret_pos[1] < area_rect.top:
             area_rect.top = caret_pos[1]
-        elif caret_pos[1] + line_height() >= area_rect.bottom:
-            area_rect.bottom = caret_pos[1] + line_height() - 1
+        elif caret_pos[1] + mono_line_height() >= area_rect.bottom:
+            area_rect.bottom = caret_pos[1] + mono_line_height() - 1
 
         line_count = self.text.count("\n") + 1
-        max_y = line_count * line_height()
+        max_y = line_count * mono_line_height()
         if area_rect.bottom > max_y > area_rect.h:
             area_rect.bottom = max_y
         elif area_rect.h > max_y:
             area_rect.top = 0
 
-        max_x = max(map(lambda x: get_text_size(x)[0], self.text.split("\n")))
+        max_x = max(map(lambda x: get_mono_text_size(x)[0], self.text.split("\n")))
         if area_rect.right > max_x > area_rect.w:
             area_rect.right = max_x
         elif area_rect.w > max_x:
@@ -155,6 +161,8 @@ class TextBox(UIBaseComponent):
         return selection_start, selection_end
 
     def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:
+        self.__tb_button.draw(screen)
+
         caret_pos = self.__get_caret_pos()
         area_rect = self.__get_area_rect(caret_pos)
 
@@ -167,13 +175,13 @@ class TextBox(UIBaseComponent):
             selection_range = self.__get_selection_range()
 
         if self.text:
-            rendered_text = write_text_highlighted(
+            rendered_text = write_mono_text_hlt(
                 self.text,
                 selection_range=selection_range,
                 add_newline_width=True
             )
         else:
-            rendered_text = write_text(
+            rendered_text = write_mono_text(
                 HC_STRS["light_gray"] + self.placeholder_text,
                 selection_range=selection_range,
                 add_newline_width=True
@@ -190,7 +198,7 @@ class TextBox(UIBaseComponent):
         if not self.focused:
             return
         if curr_time - self.blink_start <= TEXTBOX_CARET_BLINK_SPEED:
-            pg.draw.rect(screen, TEXTBOX_CARET_COLOR, pg.Rect(caret_pos, (2, line_height())))
+            pg.draw.rect(screen, TEXTBOX_CARET_COLOR, pg.Rect(caret_pos, (2, mono_line_height())))
         elif curr_time - self.blink_start > TEXTBOX_CARET_BLINK_SPEED * 2:
             self.blink_start = curr_time
 
@@ -245,6 +253,11 @@ class TextBox(UIBaseComponent):
         self.focused = False
 
     def handle_event(self, event: pg.event.Event) -> bool:
+        if not self.focused and self.__tb_button.handle_event(event):
+            return True
+        if not self.focused:
+            return False
+
         if event.type == pg.MOUSEBUTTONDOWN and event.button == pg.BUTTON_LEFT:
             if not self.rect.collidepoint(event.pos):
                 return False
@@ -337,3 +350,12 @@ class TextBox(UIBaseComponent):
             self.insert_text(event.unicode)
 
         return True
+
+
+class _TextBoxButton(Button):
+    def __init__(self, tb: TextBox):
+        super().__init__(pg.Rect(0, 0, 0, 0), on_click=tb.focus)
+        self.add_constraint(MatchRect(tb))
+
+    def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:
+        pass

@@ -1,5 +1,5 @@
 from .blocks import *
-from text_rendering import line_height
+from text_rendering import mono_line_height
 from .constants import (
     PROPERTY_NAME_COL_WIDTH, PROPERTY_VALUE_COL_WIDTH, INFO_BAR_WIDTH, PROPERTY_TEXTBOX_PADDING, PROPERTY_BORDER_COLOR,
     INFO_BAR_BG, INFO_BAR_ARROW_SELECTOR_PADDING, TEXTBOX_MIN_HEIGHT
@@ -29,10 +29,10 @@ class InfoBar(UIBaseComponent):
         self.y_offset = 0
 
         if isinstance(block, IOBlock):
-            self.table = Table((0, 0), [line_height()] * 4, [PROPERTY_NAME_COL_WIDTH, PROPERTY_VALUE_COL_WIDTH])
+            self.table = Table((0, 0), [mono_line_height()] * 4, [PROPERTY_NAME_COL_WIDTH, PROPERTY_VALUE_COL_WIDTH])
             self.table[3, 0] = self.language.info.input.name
         else:
-            self.table = Table((0, 0), [line_height()] * 3, [PROPERTY_NAME_COL_WIDTH, PROPERTY_VALUE_COL_WIDTH])
+            self.table = Table((0, 0), [mono_line_height()] * 3, [PROPERTY_NAME_COL_WIDTH, PROPERTY_VALUE_COL_WIDTH])
         self.table[0, 0] = self.language.info.type.name
         self.table[1, 0] = self.language.info.position.name
         self.table[2, 0] = self.language.info.size.name
@@ -43,25 +43,26 @@ class InfoBar(UIBaseComponent):
             self.table[3, 0] = self.language.info.input.name
 
         if not isinstance(block, StartBlock):
-            components.append(TextLabel((0, 0), language.info.in_point_selector.name))
+            components.append(TextLabel((0, 0), language.info.in_point_selector.name, ui_font=True))
             self.arrows_in_selector = ArrowPointSelector(block.in_point, inward=True)
             components.append(self.arrows_in_selector)
 
         if not isinstance(block, CondBlock) and not isinstance(block, EndBlock):
-            components.append(TextLabel((0, 0), language.info.out_point_selector.name))
+            components.append(TextLabel((0, 0), language.info.out_point_selector.name, ui_font=True))
             self.arrow1_out_selector = ArrowPointSelector(block.out_point, inward=False)
             components.append(self.arrow1_out_selector)
         elif isinstance(block, CondBlock):
-            components.append(TextLabel((0, 0), language.info.out_point_selectors.name))
+            components.append(TextLabel((0, 0), language.info.out_point_selectors.name, ui_font=True))
             self.arrow1_out_selector = ArrowPointSelector(block.on_true.out_point, inward=False)
             self.arrow2_out_selector = ArrowPointSelector(block.on_false.out_point, inward=False)
-            true_label = TextLabel((0, 0), language.info.true_out_point_selector.name)
-            false_label = TextLabel((0, 0), language.info.false_out_point_selector.name)
+            true_label = TextLabel((0, 0), language.info.true_out_point_selector.name, ui_font=True)
+            false_label = TextLabel((0, 0), language.info.false_out_point_selector.name, ui_font=True)
             true_container = Container(
                 pg.Rect(0, 0, 0, 0),
                 [true_label, self.arrow1_out_selector],
                 ContainerDirection.TOP_TO_BOTTOM,
-                ContainerAlignment.CENTER
+                ContainerAlignment.CENTER,
+                INFO_BAR_ARROW_SELECTOR_PADDING
             )
             (true_container
                 .add_constraint(MatchMaxWidth(true_container.components))
@@ -70,7 +71,8 @@ class InfoBar(UIBaseComponent):
                 pg.Rect(0, 0, 0, 0),
                 [false_label, self.arrow2_out_selector],
                 ContainerDirection.TOP_TO_BOTTOM,
-                ContainerAlignment.CENTER
+                ContainerAlignment.CENTER,
+                INFO_BAR_ARROW_SELECTOR_PADDING
             )
             (false_container
                 .add_constraint(MatchMaxWidth(false_container.components))
