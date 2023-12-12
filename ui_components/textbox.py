@@ -346,7 +346,7 @@ class TextBox(UIBaseComponent):
                 self.selection_start = None
             else:
                 self.focused = False
-        elif event.key == pg.K_RETURN:
+        elif event.key == pg.K_RETURN and self.__single_line:
             self.send()
             return True
         elif event.key not in control_keys:

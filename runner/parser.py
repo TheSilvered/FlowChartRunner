@@ -63,7 +63,7 @@ class Parser:
             type_ = self.__type_name_to_type(self.tok.value)
             self.advance()
 
-            nodes.append(SetNode(ident, ReadNode(ident, type_), True))
+            nodes.append(ReadNode(ident, type_))
             if self.tok != TokenType.COMMA:
                 break
             self.advance()

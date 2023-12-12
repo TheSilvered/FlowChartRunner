@@ -267,7 +267,9 @@ class ReadNode(Node):
             else:
                 value = cast_val(value, self.type)
             if not value.error():
-                return value
+                sym_table[self.name] = value
+                break
+        return ExeEmpty()
 
     def __str__(self):
         return f"ReadNode(name={self.name!r}, type={self.type})"

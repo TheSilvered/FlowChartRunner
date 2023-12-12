@@ -117,7 +117,7 @@ def sub_val(left: ExeValue, right: ExeValue) -> ExeValue:
         return error
 
     if left.number() and right.number():
-        return ExeNumber(left.value + right.value)
+        return ExeNumber(left.value - right.value)
     else:
         return _type_error(left, right, "-")
 
