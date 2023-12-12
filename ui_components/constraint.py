@@ -160,3 +160,13 @@ class MatchRect(Constraint):
     def apply(self, ui_comp: UIBaseComponent):
         ui_comp.pos = self.component.pos
         ui_comp.size = self.component.size
+
+
+class BindAttr(Constraint):
+    def __init__(self, obj, obj_attr_name, comp_attr_name):
+        self.obj = obj
+        self.obj_attr_name = obj_attr_name
+        self.comp_attr_name = comp_attr_name
+
+    def apply(self, ui_comp: UIBaseComponent):
+        setattr(ui_comp, self.comp_attr_name, getattr(self.obj, self.obj_attr_name))

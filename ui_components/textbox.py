@@ -271,7 +271,10 @@ class TextBox(UIBaseComponent):
             if self.selecting_with_mouse:
                 self.selecting_with_mouse = False
                 return True
-            return self.rect.collidepoint(event.pos)
+            elif not self.rect.collidepoint(event.pos):
+                self.focused = False
+                return False
+            return True
         elif event.type == pg.MOUSEMOTION and self.selecting_with_mouse:
             if self.selecting_with_mouse:
                 self.caret_pos = self.__get_caret_pos_from_coordinates(event.pos)

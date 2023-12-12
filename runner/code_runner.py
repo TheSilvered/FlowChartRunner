@@ -113,9 +113,7 @@ class Runner:
             for key, value in sym_table.items():
                 sym_table_vars.put_nowait((key, value.value))
 
-            sym_table_vars.put_nowait(None)
             time.sleep(delay.value)
-
             while is_paused.value:
                 pass
 
@@ -214,10 +212,8 @@ class Runner:
         try:
             # update at most 50 variables per frame
             for _ in range(50):
-                value = self.sym_table_vars.get_nowait()
-                if value is None:
-                    break
-                self.sym_table[value[0]] = value[1]
+                key, value = self.sym_table_vars.get_nowait()
+                self.sym_table[key] = value
         except queue.Empty:
             pass
 
