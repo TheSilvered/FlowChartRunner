@@ -72,21 +72,36 @@ class UIBaseComponent(ABC):
     def __init__(self, rect: pg.Rect):
         self._rect = rect
         self._constraints = []
+        self.__constraints_applied = False
 
     @abstractmethod
     def handle_event(self, event: pg.event.Event) -> bool:
         pass
 
+    def update(self):
+        """Called before applying constraints to an object"""
+        pass
+
     @final
     def draw(self, screen: pg.Surface, *args, **kwargs) -> None:
+        self.update()
         for constraint in self._constraints:
             constraint.apply(self)
         self._draw(screen, *args, **kwargs)
+        self.__constraints_applied = False
         # pg.draw.rect(screen, (255, 0, 255), self.rect, 1)
 
     @abstractmethod
     def _draw(self, screen: pg.Surface, *args, **kwargs) -> None:
         pass
+
+    def apply_constraints(self):
+        """Applies the constraints to an object. It applies them only once per draw call."""
+        if self.__constraints_applied:
+            return
+        for constraint in self._constraints:
+            constraint.apply(self)
+        self.__constraints_applied = True
 
     def add_constraint(self, constraint):
         self._constraints.append(constraint)

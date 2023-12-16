@@ -4,10 +4,9 @@ from runner import Runner, RunnerError
 from text_rendering import mono_line_height
 from ui_components import (
     InfoBar, draw_arrows, StartBlock, EndBlock, BlockBase, IOBlock, CondBlock, InitBlock, CalcBlock, BlockState,
-    TextBox
+    RunnerBar
 )
 from ui_components.blocks import Pos, _OptionBlock
-from ui_components.constants import TEXTBOX_PADDING
 
 from .constants import GUIDELINE_COLOR, AXIS_COLOR, EDITOR_BG_COLOR, SELECTION_BORDER_COLOR
 
@@ -34,8 +33,7 @@ class Editor:
         self.select_area = pg.Rect(-1, -1, 0, 0)
         self.selected_blocks: list[BlockBase] = []
         self.global_offset = [0, 0]
-        self.info_bar: InfoBar | None = None
-        self.input_textbox = None
+        self.sidebar: InfoBar | RunnerBar | None = None
 
     @property
     def pending_next_block(self):
@@ -148,12 +146,76 @@ class Editor:
         elif self.selecting:
             self.update_select_area()
 
-    def handle_event(self, event: pg.event.Event):
-        if self.info_bar is not None and self.info_bar.handle_event(event):
-            self.pending_next_block = None
+    def __handle_keydown_event(self, event):
+        key = event.key
+
+        if key == pg.K_F5:
+            self.start_execution()
+            return
+        elif key == pg.K_F6:
+            self.start_execution(True)
+            return
+        elif self.runner is not None:
+            if key == pg.K_b and pg.key.get_mods() & pg.KMOD_CTRL:
+                self.stop_execution()
+            elif key == pg.K_s and pg.key.get_mods() & pg.KMOD_ALT:
+                if self.runner.is_paused:
+                    self.runner.resume()
+                else:
+                    self.runner.pause()
+            elif key == pg.K_w and pg.key.get_mods() & pg.KMOD_CTRL:
+                self.runner.advance()
             return
 
-        if self.input_textbox is not None and self.input_textbox.handle_event(event):
+        if key == pg.K_i:
+            input_block = IOBlock(None, "", True)
+            self.blocks.append(input_block)
+        elif key == pg.K_o:
+            output_block = IOBlock(None, "", False)
+            self.blocks.append(output_block)
+        elif key == pg.K_c:
+            cond_block = CondBlock(
+                None, "",
+                self.langauge.CondBlock.true_branch.name,
+                self.langauge.CondBlock.false_branch.name
+            )
+            self.blocks.append(cond_block)
+        elif key == pg.K_n:
+            calc_block = CalcBlock(None, "")
+            self.blocks.append(calc_block)
+        elif key == pg.K_v:
+            var_block = InitBlock(None, "")
+            self.blocks.append(var_block)
+        elif key == pg.K_w and len(self.selected_blocks) == 1:
+            self.pending_next_block = self.selected_blocks[0]
+            if isinstance(self.selected_blocks[0], EndBlock) or isinstance(self.selected_blocks[0], CondBlock):
+                self.pending_next_block = None
+            else:
+                self.selected_blocks = []
+        elif key == pg.K_t and len(self.selected_blocks) == 1:
+            if not isinstance(self.selected_blocks[0], CondBlock):
+                return
+            self.pending_next_block = self.selected_blocks[0].on_true
+            self.fake_pending_next_block = self.selected_blocks[0]
+            self.selected_blocks = []
+        elif key == pg.K_f and len(self.selected_blocks) == 1:
+            if not isinstance(self.selected_blocks[0], CondBlock):
+                return
+            self.pending_next_block = self.selected_blocks[0].on_false
+            self.fake_pending_next_block = self.selected_blocks[0]
+            self.selected_blocks = []
+        elif key in (pg.K_DELETE, pg.K_BACKSPACE):
+            if self.pending_next_block is not None:
+                self.pending_next_block.next_block = None
+                self.pending_next_block = None
+            else:
+                blocks = self.selected_blocks.copy()
+                for block in blocks:
+                    self.delete_block(block)
+
+    def handle_event(self, event: pg.event.Event):
+        if self.sidebar is not None and self.sidebar.handle_event(event):
+            self.pending_next_block = None
             return
 
         if event.type == pg.MOUSEBUTTONDOWN:
@@ -163,84 +225,26 @@ class Editor:
         elif event.type == pg.MOUSEMOTION:
             self.__handle_mouse_motion_event(event)
         elif event.type == pg.KEYDOWN:
-            if event.key == pg.K_i:
-                input_block = IOBlock(None, "", True)
-                self.blocks.append(input_block)
-            elif event.key == pg.K_o:
-                output_block = IOBlock(None, "", False)
-                self.blocks.append(output_block)
-            elif event.key == pg.K_c:
-                cond_block = CondBlock(
-                    None, "",
-                    self.langauge.CondBlock.true_branch.name,
-                    self.langauge.CondBlock.false_branch.name
-                )
-                self.blocks.append(cond_block)
-            elif event.key == pg.K_n:
-                calc_block = CalcBlock(None, "")
-                self.blocks.append(calc_block)
-            elif event.key == pg.K_v:
-                var_block = InitBlock(None, "")
-                self.blocks.append(var_block)
-            elif event.key == pg.K_w and len(self.selected_blocks) == 1:
-                self.pending_next_block = self.selected_blocks[0]
-                if isinstance(self.selected_blocks[0], EndBlock) or isinstance(self.selected_blocks[0], CondBlock):
-                    self.pending_next_block = None
-                else:
-                    self.selected_blocks = []
-            elif event.key == pg.K_t and len(self.selected_blocks) == 1:
-                if not isinstance(self.selected_blocks[0], CondBlock):
-                    return
-                self.pending_next_block = self.selected_blocks[0].on_true
-                self.fake_pending_next_block = self.selected_blocks[0]
-                self.selected_blocks = []
-            elif event.key == pg.K_f and len(self.selected_blocks) == 1:
-                if not isinstance(self.selected_blocks[0], CondBlock):
-                    return
-                self.pending_next_block = self.selected_blocks[0].on_false
-                self.fake_pending_next_block = self.selected_blocks[0]
-                self.selected_blocks = []
-            elif event.key in (pg.K_DELETE, pg.K_BACKSPACE):
-                if self.pending_next_block is not None:
-                    self.pending_next_block.next_block = None
-                    self.pending_next_block = None
-                else:
-                    blocks = self.selected_blocks.copy()
-                    for block in blocks:
-                        self.delete_block(block)
-            elif event.key == pg.K_r:
-                self.start_execution()
-            elif event.key == pg.K_s:
-                if self.runner is not None:
-                    self.stop_execution()
-            elif event.key == pg.K_p:
-                if self.runner is not None and self.runner.is_paused:
-                    self.runner.resume()
-                elif self.runner is not None:
-                    self.runner.pause()
+            self.__handle_keydown_event(event)
 
-    def start_execution(self):
+    def start_execution(self, start_paused=False):
         self.selected_blocks = []
         self.pending_next_block = None
         self.selecting = False
         try:
-            self.runner = Runner(self.start_block)
+            self.runner = Runner(self.start_block, delay=0.5)
         except RunnerError as e:
             print(e.exe_err.format(self.langauge))
             return
-        self.runner.start()
-        self.input_textbox = TextBox(
-            rect=pg.Rect(10, 10, 300, mono_line_height() + TEXTBOX_PADDING * 2),
-            on_send=self.__send_input,
-            single_line=True
-        )
+        self.runner.start(start_paused)
+        self.sidebar = RunnerBar(self.runner, self.langauge)
 
     def stop_execution(self):
         if self.runner is None:
             return
         self.runner.stop()
         self.runner = None
-        self.input_textbox = None
+        self.sidebar = None
 
     def delete_block(self, block):
         # These blocks cannot be deleted
@@ -262,10 +266,12 @@ class Editor:
         self.selected_blocks.remove(block)
 
     def __update_info_bar(self):
+        if self.runner is not None:
+            return
         if len(self.selected_blocks) != 1:
-            self.info_bar = None
-        elif self.info_bar != self.selected_blocks[0]:
-            self.info_bar = InfoBar(self.selected_blocks[0], self.langauge)
+            self.sidebar = None
+        elif self.sidebar != self.selected_blocks[0]:
+            self.sidebar = InfoBar(self.selected_blocks[0], self.langauge)
 
     def __draw_background_grid(self, screen):
         screen_w = screen.get_width()
@@ -294,9 +300,6 @@ class Editor:
                 print(message)
             for error in self.runner.get_queued_errors():
                 print(error.format(self.langauge))
-            placeholder = self.runner.get_placeholder_text()
-            if placeholder is not None and self.input_textbox is not None:
-                self.input_textbox.placeholder_text = placeholder
             if not self.runner.is_running():
                 self.stop_execution()
 
@@ -314,11 +317,8 @@ class Editor:
             block.draw(screen)
             block.pos -= self.global_offset
 
-        if self.info_bar is not None and self.runner is None:
-            self.info_bar.draw(screen)
-
-        if self.input_textbox is not None:
-            self.input_textbox.draw(screen)
+        if self.sidebar is not None:
+            self.sidebar.draw(screen)
 
         if self.selecting and self.runner is None:
             pg.draw.rect(screen, SELECTION_BORDER_COLOR, self.select_area, 1)

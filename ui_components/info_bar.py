@@ -41,19 +41,27 @@ class InfoBar(UIBaseComponent):
         self.arrow2_out_selector = None
         self.y_offset = 0
 
+        self._resizing = False
+        self._resize_offset = 0
+
+        table_data = [
+            (self.language.info.type.name, ""),
+            (self.language.info.position.name, ""),
+            (self.language.info.size.name, "")
+        ]
         if isinstance(block, IOBlock):
-            self.table = Table((0, 0), [mono_line_height()] * 4, [PROPERTY_NAME_COL_WIDTH, PROPERTY_VALUE_COL_WIDTH])
-            self.table[3, 0] = self.language.info.input.name
-        else:
-            self.table = Table((0, 0), [mono_line_height()] * 3, [PROPERTY_NAME_COL_WIDTH, PROPERTY_VALUE_COL_WIDTH])
-        self.table[0, 0] = self.language.info.type.name
-        self.table[1, 0] = self.language.info.position.name
-        self.table[2, 0] = self.language.info.size.name
+            table_data.append((self.language.info.input.name, ""))
+
+        self.table = Table(
+            (0, 0),
+            INFO_BAR_WIDTH,
+            mono_line_height(),
+            [PROPERTY_NAME_COL_WIDTH, PROPERTY_VALUE_COL_WIDTH],
+            table_data
+        )
+        self.table.add_constraint(MatchWidth(self))
 
         components.append(self.table)
-
-        if isinstance(block, IOBlock):
-            self.table[3, 0] = self.language.info.input.name
 
         if not isinstance(block, StartBlock):
             components.append(TextLabel((0, 0), language.info.in_point_selector.name, ui_font=True))
@@ -165,8 +173,14 @@ class InfoBar(UIBaseComponent):
         elif event.type == pg.MOUSEWHEEL and self.rect.collidepoint(pg.mouse.get_pos()):
             self.y_offset += event.y * 15
             return True
-        elif event.type == pg.MOUSEBUTTONDOWN and self.rect.collidepoint(event.pos):
-            return True
+        elif event.type == pg.MOUSEBUTTONDOWN:
+            if event.button == pg.BUTTON_LEFT and self.x - 10 <= event.pos[0] <= self.x + 10:
+                self._resizing = True
+                self._resize_offset = event.pos[0] - self.x
+                return True
+            return self.rect.collidepoint(event.pos)
+        elif event.type == pg.MOUSEBUTTONUP and event.button == pg.BUTTON_LEFT:
+            self._resizing = False
         return False
 
     def __clamp_y_offset(self):
@@ -188,6 +202,9 @@ class InfoBar(UIBaseComponent):
             self.y_offset = 0
 
     def _draw(self, screen, *args, **kwargs):
+        if self._resizing:
+            self.w = max(screen.get_width() - pg.mouse.get_pos()[0] + self._resize_offset, INFO_BAR_WIDTH)
+
         self.__update_point_selectors()
         self.__update_table_values()
 

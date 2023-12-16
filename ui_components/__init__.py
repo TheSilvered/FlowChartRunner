@@ -11,3 +11,4 @@ from .blocks import BlockState
 from .arrow_renderer import draw_arrows
 from .table import Table
 from .table import DictTable
+from .runner_bar import RunnerBar

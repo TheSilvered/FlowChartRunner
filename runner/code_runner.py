@@ -32,6 +32,8 @@ class Runner:
         self._delay_value = None
         self._current_block = None
         self._is_paused = None
+        self._block_advance_value = None
+        self._block_advance = 0
         self._error_occurred = None
         self.out_q = mp.Queue()
         self.err_q = mp.Queue()
@@ -87,6 +89,7 @@ class Runner:
             delay: mp.Value,  # delay in seconds between blocks
             current_block: mp.Value,  # set to the id of the block being currently executed
             is_paused: mp.Value,  # set to whether the execution is paused
+            block_advance: mp.Value,  # increasing the number by N, advances N blocks
             error_occurred: mp.Value,  # set to whether an error has occurred
             out_q: mp.Queue,  # queue for stdout messages, populated by the runner
             err_q: mp.Queue,  # queue for stderr messages, populated by the runner
@@ -100,6 +103,7 @@ class Runner:
         curr_block_id = first_block
         sym_table = {}
         error_occurred_v = False
+        blocks_advanced = 0
 
         while curr_block_id in ast_map:
             ast, next_block = ast_map[curr_block_id]
@@ -114,8 +118,13 @@ class Runner:
                 sym_table_vars.put_nowait((key, value.value))
 
             time.sleep(delay.value)
-            while is_paused.value:
+            while is_paused.value and block_advance.value == blocks_advanced:
                 pass
+
+            if is_paused.value and block_advance.value > blocks_advanced:
+                blocks_advanced += 1
+            else:
+                blocks_advanced = block_advance.value
 
             if isinstance(next_block, int):
                 curr_block_id = next_block
@@ -133,6 +142,9 @@ class Runner:
 
         if error_occurred_v:
             while True:
+                pass
+        else:
+            while is_paused.value and block_advance.value == blocks_advanced:
                 pass
 
     def get_blocks(self):
@@ -155,14 +167,16 @@ class Runner:
         blocks_checked = [b for b in blocks_checked if not isinstance(b, EndBlock) and not isinstance(b, StartBlock)]
         return blocks_checked
 
-    def start(self):
+    def start(self, start_paused=False):
         if self._process is not None:
             return
 
         self._delay_value = mp.Value(ctypes.c_double, self._delay)
         self._current_block = mp.Value(ctypes.c_longlong, 0)
-        self._is_paused = mp.Value(ctypes.c_bool, False)
+        self._is_paused = mp.Value(ctypes.c_bool, start_paused)
         self._error_occurred = mp.Value(ctypes.c_bool, False)
+        self._block_advance_value = mp.Value(ctypes.c_ulonglong, 0)
+        self._block_advance = 0
         self.in_q = mp.Queue()
         self.link_in_msg = mp.Queue()
         self.link_out_msg = mp.Queue()
@@ -177,6 +191,7 @@ class Runner:
                 self._delay_value,
                 self._current_block,
                 self._is_paused,
+                self._block_advance_value,
                 self._error_occurred,
                 self.out_q,
                 self.err_q,
@@ -196,6 +211,8 @@ class Runner:
         self._delay_value = None
         self._current_block = None
         self._is_paused = None
+        self._block_advance_value = None
+        self._block_advance = 0
         self.in_q = None
         self.link_in_msg = None
         self.link_out_msg = None
@@ -231,6 +248,12 @@ class Runner:
             return
         self._is_paused.value = False
 
+    def advance(self, block_count=1):
+        if not self.is_running() or not self.is_paused:
+            return
+        self._block_advance += block_count
+        self._block_advance_value.value = self._block_advance
+
     def get_queued_messages(self):
         messages = []
         try:
@@ -263,3 +286,8 @@ class Runner:
         except queue.Empty:
             pass
         return placeholder
+
+    def queue_input_text(self, text):
+        if not self.is_running():
+            return
+        self.in_q.put(text)
