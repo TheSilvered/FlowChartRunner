@@ -4,7 +4,7 @@ from draw_utils import draw_rect
 from text_rendering import get_mono_text_size, mono_line_height, write_mono_text, write_mono_text_hlt
 from .constants import (
     TEXTBOX_BG_COLOR, TEXTBOX_PADDING, TEXTBOX_CARET_COLOR, TEXTBOX_CARET_BLINK_SPEED, TEXTBOX_BORDER_COLOR,
-    TEXTBOX_SELECTEC_BORDER_COLOR
+    TEXTBOX_SELECTEC_BORDER_COLOR, SEPARATOR_THICKNESS, TEXTBOX_CORNER_RADIUS
 )
 from text_rendering.constants import HC_STRS
 from typing import Callable
@@ -188,9 +188,11 @@ class TextBox(UIBaseComponent):
             )
 
         if self.focused:
-            draw_rect(screen, self.rect, TEXTBOX_BG_COLOR, TEXTBOX_PADDING, 2, TEXTBOX_SELECTEC_BORDER_COLOR)
+            border_color = TEXTBOX_SELECTEC_BORDER_COLOR
         else:
-            draw_rect(screen, self.rect, TEXTBOX_BG_COLOR, TEXTBOX_PADDING, 2, TEXTBOX_BORDER_COLOR)
+            border_color = TEXTBOX_BORDER_COLOR
+
+        draw_rect(screen, self.rect, TEXTBOX_BG_COLOR, TEXTBOX_CORNER_RADIUS, SEPARATOR_THICKNESS, border_color)
 
         screen.blit(rendered_text, (self.x + TEXTBOX_PADDING, self.y + TEXTBOX_PADDING), area_rect)
 

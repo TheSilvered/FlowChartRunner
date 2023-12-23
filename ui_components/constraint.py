@@ -145,7 +145,7 @@ class MatchSumHeights(Constraint):
 
 class MatchWindowWidth(Constraint):
     def apply(self, ui_comp: UIBaseComponent):
-        ui_comp.h = pg.display.get_window_size()[1]
+        ui_comp.w = pg.display.get_window_size()[0]
 
 
 class MatchWindowHeight(Constraint):

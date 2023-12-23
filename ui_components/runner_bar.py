@@ -1,6 +1,6 @@
 from .constants import (
     INFO_BAR_WIDTH, PROPERTY_TEXTBOX_PADDING, PROPERTY_BORDER_COLOR, INFO_BAR_BG, INFO_BAR_ARROW_SELECTOR_PADDING,
-    TEXTBOX_MIN_HEIGHT, TEXTBOX_PADDING
+    TEXTBOX_MIN_HEIGHT, TEXTBOX_PADDING, SEPARATOR_THICKNESS
 )
 from .table import DictTable
 from .constraint import *
@@ -133,4 +133,4 @@ class RunnerBar(UIBaseComponent):
             self.symtable_table.rect.bottomright,
             2
         )
-        pg.draw.line(screen, PROPERTY_BORDER_COLOR, (self.x - 2, 0), (self.x - 2, self.h), 2)
+        pg.draw.line(screen, PROPERTY_BORDER_COLOR, (self.x - 2, 0), (self.x - 2, self.h), SEPARATOR_THICKNESS)

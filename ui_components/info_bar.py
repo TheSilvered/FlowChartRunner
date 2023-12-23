@@ -2,7 +2,7 @@ from .blocks import *
 from text_rendering import mono_line_height
 from .constants import (
     PROPERTY_NAME_COL_WIDTH, PROPERTY_VALUE_COL_WIDTH, INFO_BAR_WIDTH, PROPERTY_TEXTBOX_PADDING, PROPERTY_BORDER_COLOR,
-    INFO_BAR_BG, INFO_BAR_ARROW_SELECTOR_PADDING, TEXTBOX_MIN_HEIGHT
+    INFO_BAR_BG, INFO_BAR_ARROW_SELECTOR_PADDING, TEXTBOX_MIN_HEIGHT, SEPARATOR_THICKNESS
 )
 from .textbox import TextBox
 from .arrow_point_selector import ArrowPointSelector
@@ -213,8 +213,20 @@ class InfoBar(UIBaseComponent):
         pg.draw.rect(screen, INFO_BAR_BG, self.rect)
         self.container.draw(screen)
 
-        pg.draw.line(screen, PROPERTY_BORDER_COLOR, self.table.rect.bottomleft, self.table.rect.bottomright, 2)
-        pg.draw.line(screen, PROPERTY_BORDER_COLOR, (self.x - 2, 0), (self.x - 2, self.h), 2)
+        pg.draw.line(
+            screen,
+            PROPERTY_BORDER_COLOR,
+            self.table.rect.bottomleft,
+            self.table.rect.bottomright,
+            SEPARATOR_THICKNESS
+        )
+        pg.draw.line(
+            screen,
+            PROPERTY_BORDER_COLOR,
+            (self.x - 2, 0),
+            (self.x - 2, self.h),
+            SEPARATOR_THICKNESS
+        )
 
     def __block_name(self):
         return self.language[self.block.__class__.__name__].name

@@ -29,6 +29,10 @@ class Button(UIBaseComponent, ABC):
     def current_state(self):
         return self._current_state
 
+    @property
+    def pressed(self):
+        return self._pressed
+
     def click(self):
         if self.state_count > 0:
             self._current_state += 1
@@ -36,7 +40,7 @@ class Button(UIBaseComponent, ABC):
         if self.on_click is not None:
             self.on_click(*self.on_click_args)
 
-    def __collide_clickable(self, point):
+    def collide_clickable(self, point):
         rect = self.rect.copy()
         rect.x -= self.extra_padding[0]
         rect.y -= self.extra_padding[1]
@@ -45,14 +49,14 @@ class Button(UIBaseComponent, ABC):
         return rect.collidepoint(point)
 
     def handle_event(self, event: pg.event.Event) -> bool:
-        if event.type == pg.MOUSEBUTTONDOWN and self.__collide_clickable(event.pos) and event.button == pg.BUTTON_LEFT:
+        if event.type == pg.MOUSEBUTTONDOWN and self.collide_clickable(event.pos) and event.button == pg.BUTTON_LEFT:
             self._pressed = True
             return True
         elif event.type == pg.MOUSEBUTTONUP and event.button == pg.BUTTON_LEFT:
             if not self._pressed:
                 return False
             self._pressed = False
-            if self.__collide_clickable(event.pos):
+            if self.collide_clickable(event.pos):
                 self.click()
                 return True
             return False
